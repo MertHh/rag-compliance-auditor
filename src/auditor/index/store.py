@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import date
 from typing import Protocol
 
 from auditor.ingestion.chunker import Chunk
@@ -26,10 +27,18 @@ class Hit:
     payload: dict
 
 
+class InvalidDateError(ValueError):
+    pass
+
+
 def date_to_int(value: str | None) -> int | None:
     if not value:
         return None
-    return int(value.replace("-", ""))
+    try:
+        parsed = date.fromisoformat(value)
+    except (TypeError, ValueError) as exc:
+        raise InvalidDateError(f"date must be YYYY-MM-DD, got {value!r}") from exc
+    return parsed.year * 10000 + parsed.month * 100 + parsed.day
 
 
 class VectorStore(Protocol):

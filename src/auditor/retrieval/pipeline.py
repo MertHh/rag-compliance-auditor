@@ -6,7 +6,7 @@ from auditor.ingestion.chunker import PageBox
 from auditor.retrieval.config import RetrievalConfig
 from auditor.retrieval.fusion import rrf_fuse
 from auditor.retrieval.reranker import Reranker
-from auditor.storage.docstore import DocumentStore
+from auditor.storage.docstore import DocumentNotFound, DocumentStore
 
 
 @dataclass
@@ -150,14 +150,19 @@ class Retriever:
             parent = parents.get(chunk.parent_id)
             if parent is None:
                 start, end = payload["parent_start"], payload["parent_end"]
-                text = self._docstore.load(chunk.document_id).text[start:end]
+                section_path = payload["parent_section_path"]
+                try:
+                    text = self._docstore.load(chunk.document_id).text[start:end]
+                except DocumentNotFound:
+                    text, start, end = chunk.text, chunk.char_start, chunk.char_end
+                    section_path = chunk.section_path
                 parent = ParentPassage(
                     parent_id=chunk.parent_id,
                     document_id=chunk.document_id,
                     text=text,
                     char_start=start,
                     char_end=end,
-                    section_path=payload["parent_section_path"],
+                    section_path=section_path,
                     chunk_ids=[],
                 )
                 parents[chunk.parent_id] = parent

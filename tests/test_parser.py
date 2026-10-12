@@ -87,3 +87,57 @@ def test_pdf_without_text_layer_raises_scanned(make_pdf, tmp_path):
     path = make_pdf(tmp_path / "scan.pdf", [[], []])
     with pytest.raises(ScannedPdfError):
         parse_pdf(path)
+
+
+def test_png_bytes_named_pdf_raise_invalid_pdf(tmp_path):
+    path = tmp_path / "x.pdf"
+    path.write_bytes(b"\x89PNG\r\n\x1a\n" + b"\0" * 200)
+    with pytest.raises(InvalidPdfError):
+        parse_pdf(path)
+
+
+def test_html_named_pdf_raises_invalid_pdf(tmp_path):
+    path = tmp_path / "page.pdf"
+    path.write_bytes(b"<html><body><p>" + b"This is a contract text. " * 20 + b"</p></body></html>")
+    with pytest.raises(InvalidPdfError):
+        parse_pdf(path)
+
+
+def test_failure_during_text_extraction_raises_invalid_pdf(make_pdf, tmp_path, monkeypatch):
+    import pymupdf
+
+    def broken(*args, **kwargs):
+        raise RuntimeError("malformed page tree")
+
+    path = make_pdf(tmp_path / "c.pdf", PAGES)
+    monkeypatch.setattr(pymupdf.Page, "get_text", broken)
+    with pytest.raises(InvalidPdfError, match="damaged"):
+        parse_pdf(path)
+
+
+def _two_piece_pdf(path, left, left_x, right, right_x):
+    import pymupdf
+
+    doc = pymupdf.open()
+    page = doc.new_page()
+    page.insert_text((left_x, 100), left, fontsize=11)
+    page.insert_text((right_x, 100), right, fontsize=11)
+    page.insert_text((72, 130), "The body text of this clause continues here for a while.", fontsize=11)
+    doc.save(str(path))
+    doc.close()
+    return path
+
+
+def test_hanging_indent_number_is_joined_with_its_title(tmp_path):
+    path = _two_piece_pdf(tmp_path / "h.pdf", "1.", 72, "Definitions and interpretation of terms", 120)
+    lines = [l for l in parse_pdf(path).lines if l.text]
+    assert lines[0].text == "1. Definitions and interpretation of terms"
+    assert lines[0].bbox[0] < 80 and lines[0].bbox[2] > 200
+    assert len(lines) == 2
+
+
+def test_two_columns_on_one_baseline_stay_separate(tmp_path):
+    path = _two_piece_pdf(tmp_path / "c.pdf", "Left column text here", 72, "Right column text here", 330)
+    texts = [l.text for l in parse_pdf(path).lines if l.text]
+    assert "Left column text here" in texts
+    assert "Right column text here" in texts

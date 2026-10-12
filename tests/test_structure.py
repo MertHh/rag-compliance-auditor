@@ -90,3 +90,28 @@ def test_large_font_line_is_a_heading():
     sections = detect_sections(lines)
     assert [s.path for s in sections] == ["Confidentiality"]
     assert sections[0].number is None
+
+
+import pytest
+
+
+@pytest.mark.parametrize("line", [
+    "Section 9, Customer shall pay the fees within thirty days.",
+    "Section 7.",
+    "Section 5 (Confidentiality) shall survive termination.",
+])
+def test_wrapped_cross_reference_variants_are_not_headings(line):
+    text = "1. Scope\n2. Fees\n2.1 Subject to the limits in\n" + line + "\n3. Term\n3.1 One year."
+    assert [s.path for s in _sections(text)] == ["1", "2", "2 > 2.1", "3", "3 > 3.1"]
+
+
+def test_single_article_line_does_not_shift_numbered_levels():
+    text = "1. Scope\nARTICLE IX applies here\n2. Fees\n2.1 Monthly."
+    paths = [s.path for s in _sections(text)]
+    assert "2 > 2.1" in paths
+    assert not any(p.startswith("IX >") for p in paths)
+
+
+def test_bare_uppercase_article_with_period_is_a_heading():
+    sections = _sections("ARTICLE I.\nScope of work.\nARTICLE II.\nFees.")
+    assert [s.path for s in sections] == ["I", "II"]

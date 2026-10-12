@@ -127,3 +127,43 @@ def test_missing_collection_behaves_as_empty():
     assert s.has_document("docA") is False
     s.delete_document("docA")
     s.set_document_metadata("docA", {"doc_type": "NDA"})
+
+
+@pytest.mark.parametrize("bad", ["May 2023", "01.05.2023", "2023-05"])
+def test_date_to_int_rejects_malformed_dates(bad):
+    from auditor.index.store import InvalidDateError
+
+    with pytest.raises(InvalidDateError):
+        date_to_int(bad)
+
+
+def test_malformed_document_date_is_stored_as_none(store):
+    store.upsert([_chunk("docC", 0, "delta")], [[0.0, 0.0, 1.0, 0.0]],
+                 [SparseVec([9], [1.0])], {"doc_type": "NDA", "date": "May 2023"})
+    hit = store.search_dense([0.0, 0.0, 1.0, 0.0], limit=1)[0]
+    assert hit.payload["text"] == "delta"
+    assert hit.payload["date"] is None and hit.payload["date_int"] is None
+
+
+def test_malformed_filter_date_raises_typed_error(store):
+    from auditor.index.store import InvalidDateError
+
+    with pytest.raises(InvalidDateError):
+        store.search_dense([1.0, 0.0, 0.0, 0.0], limit=5, flt=SearchFilter(date_from="May 2023"))
+
+
+def test_large_documents_are_upserted_in_batches(monkeypatch):
+    s = QdrantStore.in_memory()
+    s.ensure_collection(4)
+    calls = []
+    original = s._client.upsert
+
+    def counting(*args, **kwargs):
+        calls.append(len(kwargs["points"]))
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(s._client, "upsert", counting)
+    chunks = [_chunk("big", n, f"text {n}") for n in range(150)]
+    s.upsert(chunks, [[1.0, 0.0, 0.0, 0.0]] * 150, [SparseVec([1], [1.0])] * 150, {})
+    assert len(calls) >= 2 and max(calls) <= 64 and sum(calls) == 150
+    assert len(s.search_dense([1.0, 0.0, 0.0, 0.0], limit=200)) == 150

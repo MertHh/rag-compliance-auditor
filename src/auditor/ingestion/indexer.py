@@ -77,6 +77,9 @@ class Indexer:
             for chunk in chunks
         ]
 
+        # Save the text before the vectors: a search hit must always have a
+        # document behind it. A failed upsert is retried by the next ingest.
+        self._docstore.save(doc, meta, source_pdf)
         self._store.ensure_collection(self._embedder.dim)
         self._store.delete_document(doc.document_id)
         self._store.upsert(
@@ -85,5 +88,4 @@ class Indexer:
             self._sparse.encode_documents(texts),
             meta,
         )
-        self._docstore.save(doc, meta, source_pdf)
         return IngestResult(doc.document_id, len(chunks), False)

@@ -1,18 +1,26 @@
 from qdrant_client import QdrantClient, models
 
-from auditor.index.store import Hit, SearchFilter, SparseVec, date_to_int
+from auditor.index.store import Hit, InvalidDateError, SearchFilter, SparseVec, date_to_int
 from auditor.ingestion.chunker import Chunk
 
 DENSE = "dense"
 SPARSE = "sparse"
+UPSERT_BATCH = 64
 
 
 def _meta_payload(doc_meta: dict) -> dict:
+    # Document dates come from extraction and may be free-form; an unparseable
+    # date is stored as missing rather than failing the whole ingest.
+    raw_date = doc_meta.get("date")
+    try:
+        date_int = date_to_int(raw_date)
+    except InvalidDateError:
+        raw_date, date_int = None, None
     return {
         "doc_type": doc_meta.get("doc_type"),
         "jurisdiction": doc_meta.get("jurisdiction"),
-        "date": doc_meta.get("date"),
-        "date_int": date_to_int(doc_meta.get("date")),
+        "date": raw_date,
+        "date_int": date_int,
     }
 
 
@@ -100,7 +108,8 @@ class QdrantStore:
             )
             for chunk, dense_vec, sparse_vec in zip(chunks, dense, sparse, strict=True)
         ]
-        self._client.upsert(self._collection, points=points)
+        for start in range(0, len(points), UPSERT_BATCH):
+            self._client.upsert(self._collection, points=points[start:start + UPSERT_BATCH])
 
     def _query(self, query, using: str, limit: int, flt: SearchFilter | None) -> list[Hit]:
         if not self._exists():

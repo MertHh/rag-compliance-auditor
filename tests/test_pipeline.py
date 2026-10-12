@@ -147,3 +147,16 @@ def test_search_before_anything_is_indexed(tmp_path):
     result = retriever.search("liability")
     assert result.chunks == []
     assert result.insufficient_evidence is True
+
+
+def test_missing_document_text_falls_back_to_chunk_text(tmp_path, sample_contract):
+    store = QdrantStore.in_memory()
+    embedder, sparse = FakeEmbedder(), FakeSparseEncoder()
+    Indexer(store, embedder, sparse, DocumentStore(tmp_path / "a")).ingest_text(sample_contract, "msa.txt")
+    retriever = Retriever(store, embedder, sparse, FakeReranker(), DocumentStore(tmp_path / "empty"))
+    result = retriever.search("total aggregate liability twelve months")
+    top = result.chunks[0]
+    assert top.section_path == "3 > 3.1"
+    parent = result.parents[0]
+    assert parent.text == top.text
+    assert (parent.char_start, parent.char_end) == (top.char_start, top.char_end)

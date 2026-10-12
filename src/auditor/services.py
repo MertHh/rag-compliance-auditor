@@ -22,7 +22,7 @@ def build_services(settings: Settings) -> Services:
     from auditor.retrieval.reranker import BgeReranker
 
     if settings.qdrant_url:
-        client = QdrantClient(url=settings.qdrant_url)
+        client = QdrantClient(url=settings.qdrant_url, timeout=60)
     else:
         qdrant_dir = settings.data_dir / "qdrant"
         qdrant_dir.mkdir(parents=True, exist_ok=True)

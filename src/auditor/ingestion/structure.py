@@ -6,8 +6,9 @@ from auditor.ingestion.parser import Line
 
 _ARTICLE = re.compile(
     r"^(ARTICLE|Article|SECTION|Section|MADDE|Madde)\s+([IVXLCDM]+|\d{1,3})(?!\.\d)\b"
-    r"\s*[.:\-–—]?\s*(.*)$"
+    r"\s*([.:\-–—]?)\s*(.*)$"
 )
+_QUOTES = "\"'“‘"
 _NUMBERED = re.compile(r"^(\d{1,3}(?:\.\d{1,3})*)(\.?)\s+(\S.*)$")
 _TITLE_END = re.compile(r"(?<=[.:;])\s")
 
@@ -36,8 +37,17 @@ def _title(rest: str) -> str:
 
 def _classify(text: str) -> tuple[str, str, str] | None:
     m = _ARTICLE.match(text)
-    if m and _titleish(m.group(3)):
-        return "article", m.group(2), _title(m.group(3)) or f"{m.group(1)} {m.group(2)}"
+    if m:
+        keyword, number, separator, rest = m.groups()
+        # "Section 9, Customer shall..." and a wrapped "...in Section 7." are
+        # cross-references: a heading's title starts with a capital or a quote,
+        # and a bare "Section 7." only counts when written as "SECTION 7.".
+        if rest:
+            is_heading = rest[0].isupper() or rest[0] in _QUOTES
+        else:
+            is_heading = separator != "." or keyword.isupper()
+        if is_heading:
+            return "article", number, _title(rest) or f"{keyword} {number}"
     m = _NUMBERED.match(text)
     if m:
         number, dot, rest = m.groups()

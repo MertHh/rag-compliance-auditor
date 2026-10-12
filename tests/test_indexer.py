@@ -103,3 +103,17 @@ def test_empty_document_raises_and_stores_nothing(parts):
     with pytest.raises(EmptyDocumentError):
         _indexer(parts).ingest_text("  \n \n", "empty.txt")
     assert docstore.list_ids() == []
+
+
+def test_failed_docstore_save_leaves_no_vectors_behind(parts, sample_contract, monkeypatch):
+    from auditor.ingestion.parser import parse_text
+
+    store, docstore, _ = parts
+
+    def disk_full(*args, **kwargs):
+        raise OSError("disk full")
+
+    monkeypatch.setattr(docstore, "save", disk_full)
+    with pytest.raises(OSError):
+        _indexer(parts).ingest_text(sample_contract, "msa.txt")
+    assert store.has_document(parse_text(sample_contract, "msa.txt").document_id) is False
