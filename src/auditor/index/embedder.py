@@ -24,7 +24,10 @@ class BgeM3Embedder:
 
         self._model = SentenceTransformer(model_name, device=device)
         self._batch_size = batch_size
-        get_dim = getattr(self._model, "get_embedding_dimension", None) \n            or self._model.get_sentence_embedding_dimension
+        get_dim = (
+            getattr(self._model, "get_embedding_dimension", None)
+            or self._model.get_sentence_embedding_dimension
+        )
         self.dim = get_dim()
 
     def embed_documents(self, texts: list[str]) -> list[list[float]]:
