@@ -142,7 +142,9 @@ rules:
 |---|---|---|---|
 | `must_exist` | uyumlu | uyumsuz | eksik |
 | `condition` | uyumlu | uyumsuz | eksik |
-| `must_not_exist` | uyumsuz (madde var) | — | uyumlu |
+| `must_not_exist` | uyumsuz (yasak madde var) | uyumlu (bulunan metin yasak madde değil) | uyumlu |
+
+`must_not_exist` kuralında `criteria` yasak maddeyi tarif eder; "ölçütü karşılıyor" bulunan metnin o tarife uyduğu anlamına gelir.
 
 Ek durumlar: `belirsiz` (alıntı doğrulanamadı, insan incelemesi gerekir), `hata` (LLM çağrısı başarısız).
 
