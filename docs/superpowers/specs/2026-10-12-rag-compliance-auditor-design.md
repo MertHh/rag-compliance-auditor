@@ -39,7 +39,7 @@ FastAPI
  ├─ ingestion   PDF → chunk + metadata
  ├─ index       embedding, vektör deposu arayüzü, Qdrant
  ├─ retrieval   filtre → hybrid → RRF → rerank → parent
- ├─ llm         sağlayıcı arayüzü: Anthropic | Ollama
+ ├─ llm         sağlayıcı arayüzü: OpenAI | Ollama
  ├─ audit       playbook, LangGraph grafı, alıntı doğrulama, puanlama
  ├─ qa          belgeye sor
  └─ storage     SQLite: denetimler, izler, inceleme kararları
@@ -54,7 +54,7 @@ FastAPI
 | Sparse | BM25 (Qdrant sparse vektör) |
 | Reranker | `BAAI/bge-reranker-v2-m3` |
 | Orkestrasyon | LangGraph |
-| Bulut LLM | Claude: değerlendirme `claude-sonnet-5-5`, yardımcı işler `claude-haiku-5-5` |
+| Bulut LLM | OpenAI API, şemaya bağlı çıktı (structured outputs). Model adları config'den: `OPENAI_EVAL_MODEL`, `OPENAI_SMALL_MODEL` |
 | Yerel LLM | Ollama, JSON şema kısıtlı çıktı |
 | PDF ayrıştırma | PyMuPDF |
 | API | FastAPI |
@@ -73,7 +73,7 @@ src/auditor/
   ingestion/   parser.py, structure.py, chunker.py, metadata.py
   index/       store.py (arayüz), qdrant_store.py, embedder.py
   retrieval/   config.py, pipeline.py, fusion.py, reranker.py
-  llm/         base.py, anthropic_provider.py, ollama_provider.py
+  llm/         base.py, openai_provider.py, ollama_provider.py
   audit/       playbook.py, graph.py, nodes.py, citations.py, scoring.py, report.py
   qa/          answer.py
   storage/     db.py
@@ -178,8 +178,8 @@ LLM yalnızca durumu belirler; puanı kod hesaplar.
   "audit_id": "…",
   "document_id": "…",
   "playbook": "commercial_contract",
-  "provider": "anthropic",
-  "model": "claude-sonnet-5-5",
+  "provider": "openai",
+  "model": "<OPENAI_EVAL_MODEL değeri>",
   "risk_score": 37.5,
   "cached": false,
   "findings": [
@@ -212,7 +212,7 @@ Anahtar: `sha256(belge hash + playbook hash + sağlayıcı + model + prompt sür
 
 ### Modeller
 
-- Bulut: değerlendirme `claude-sonnet-5-5`; sorgu yeniden yazma, geniş tarama, metadata çıkarma ve belgeye sor `claude-haiku-5-5`.
+- Bulut (OpenAI): değerlendirme `OPENAI_EVAL_MODEL`; sorgu yeniden yazma, geniş tarama, metadata çıkarma ve belgeye sor `OPENAI_SMALL_MODEL`. Varsayılan model adları uygulama başında hesapta erişilebilir modeller listelenerek seçilir: değerlendirme için güncel güçlü model, yardımcı işler için güncel küçük model. Sağlayıcı arayüzü sayesinde başka bir bulut sağlayıcı tek dosyayla eklenebilir.
 - Yerel: tüm işler tek Ollama modeliyle. Model adı config'den okunur (`OLLAMA_MODEL`). Varsayılan, uygulama sırasında 8B sınıfı adaylar 5 örnek kuralda denenip şemaya en tutarlı uyan seçilerek belirlenir; 14B sınıfı bir model benchmark'ta ek satırdır.
 
 ### Hata yönetimi
@@ -281,7 +281,7 @@ CUAD madde türleri `must_exist` kuralına çevrilir. CUAD bir sözleşmede bulu
 
 - Eksik madde tespiti: precision, recall, F1.
 - Alıntı doğruluğu: alıntının uzman işaretiyle örtüşme oranı.
-- Sağlayıcı satırları: Claude, yerel 8B, yerel 14B.
+- Sağlayıcı satırları: OpenAI, yerel 8B, yerel 14B.
 - Denetim başına ortalama süre ve maliyet.
 
 ### Çıktı
