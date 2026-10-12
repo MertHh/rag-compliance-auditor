@@ -24,3 +24,6 @@ packages = ["src/auditor"]
 testpaths = ["tests"]
 markers = ["slow: downloads and runs real models"]
 addopts = "-m 'not slow'"
+filterwarnings = [
+    "ignore:Payload indexes have no effect in the local Qdrant:UserWarning",
+]
