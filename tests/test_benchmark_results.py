@@ -35,3 +35,35 @@ def test_endpoint(api, api_services):
            {"title": "Audit", "rows": [{"provider": "openai", "f1": 0.8}]})
     [result] = api.get("/benchmarks").json()
     assert result["title"] == "Audit" and result["rows"] == [{"provider": "openai", "f1": 0.8}]
+
+
+def test_non_finite_numbers_are_reported_as_broken(tmp_path):
+    _write(tmp_path, "nan.json",
+           '{"title": "x", "rows": [{"config": "a", "score": NaN}]}')
+    _write(tmp_path, "inf.json",
+           '{"title": "x", "rows": [{"config": "a", "score": 1e400}]}')
+
+    nan, inf = load_results(tmp_path)
+    for entry in (nan, inf):
+        assert entry["error"].startswith("unreadable result file")
+        assert entry["rows"] == []
+
+
+def test_unreadable_path_is_reported_not_raised(tmp_path):
+    (tmp_path / "d.json").mkdir()
+
+    [entry] = load_results(tmp_path)
+    assert entry["file"] == "d.json" and entry["rows"] == []
+    assert entry["error"].startswith("unreadable result file")
+
+
+def test_endpoint_survives_non_finite_file(api, api_services):
+    _write(api_services.benchmarks_dir, "a_nan.json",
+           '{"title": "x", "rows": [{"config": "a", "score": NaN}]}')
+    _write(api_services.benchmarks_dir, "b_ok.json",
+           {"title": "Audit", "rows": [{"provider": "openai", "f1": 0.8}]})
+    response = api.get("/benchmarks")
+    assert response.status_code == 200
+    broken, ok = response.json()
+    assert broken["error"].startswith("unreadable result file") and broken["rows"] == []
+    assert ok["title"] == "Audit"

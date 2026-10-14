@@ -5,14 +5,18 @@ column labels the row; column names must not contain "." or "[" (chart field pat
 
 import json
 from pathlib import Path
+from typing import Annotated
 
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, Field, ValidationError
+
+# NaN and Infinity cannot be rendered as JSON, so they are rejected at load time.
+FiniteFloat = Annotated[float, Field(allow_inf_nan=False)]
 
 
 class BenchmarkFile(BaseModel):
     title: str
     created_at: str | None = None
-    rows: list[dict[str, str | float | int | None]]
+    rows: list[dict[str, str | FiniteFloat | int | None]]
     notes: str = ""
 
 
@@ -23,7 +27,7 @@ def load_results(directory: Path) -> list[dict]:
     for path in sorted(directory.glob("*.json")):
         try:
             data = BenchmarkFile.model_validate(json.loads(path.read_text(encoding="utf-8")))
-        except (json.JSONDecodeError, ValidationError, UnicodeDecodeError) as exc:
+        except (OSError, json.JSONDecodeError, ValidationError, UnicodeDecodeError) as exc:
             results.append({"file": path.name, "title": path.stem, "created_at": None,
                             "rows": [], "notes": "", "error": f"unreadable result file: {exc}"})
             continue
