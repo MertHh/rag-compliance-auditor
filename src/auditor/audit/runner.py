@@ -1,7 +1,8 @@
 import hashlib
+import json
 import time
 import uuid
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Callable
 
@@ -17,9 +18,17 @@ from auditor.storage.db import AuditStore
 from auditor.storage.docstore import DocumentNotFound, DocumentStore
 
 
+def config_fingerprint(config: AuditConfig) -> str:
+    """Settings that change audit results; concurrency only changes speed."""
+    values = asdict(config)
+    del values["concurrency"]
+    return hashlib.sha256(json.dumps(values, sort_keys=True).encode("utf-8")).hexdigest()[:16]
+
+
 def cache_key(document_id: str, playbook_sha256: str, provider_name: str, model_label: str,
-              prompt_version: str = PROMPT_VERSION) -> str:
-    raw = "\n".join([document_id, playbook_sha256, provider_name, model_label, prompt_version])
+              prompt_version: str = PROMPT_VERSION, settings: str = "") -> str:
+    raw = "\n".join([document_id, playbook_sha256, provider_name, model_label, prompt_version,
+                     settings])
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 
@@ -52,7 +61,8 @@ class Auditor:
         except ValueError as exc:  # e.g. an unknown provider or malformed price settings
             raise ProviderUnavailableError(str(exc)) from exc
         provider.check_available()
-        key = cache_key(document_id, loaded.sha256, provider.name, models_label(provider))
+        key = cache_key(document_id, loaded.sha256, provider.name, models_label(provider),
+                        settings=config_fingerprint(self._config))
         return PreparedAudit(document_id, loaded, provider, key)
 
     def cached(self, prepared: PreparedAudit) -> dict | None:
