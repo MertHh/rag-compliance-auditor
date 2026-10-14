@@ -103,3 +103,41 @@ def sequence(*values):
             return items.pop(0) if len(items) > 1 else items[0]
 
     return next_value
+
+
+CONTRACT_PAGES = [
+    [("1. Definitions", 11),
+     ("Services means the consulting services described in Exhibit A.", 11)],
+    [("2. Liability", 11),
+     ("The total liability shall not exceed the fees paid in twelve months.", 11)],
+]
+LIABILITY_LINE = "The total liability shall not exceed the fees paid in twelve months."
+
+
+def by_rule(responses: dict):
+    """Handler choosing the response by the rule title in the prompt."""
+    def handler(user):
+        for title, value in responses.items():
+            if f"Rule: {title}\n" in user:
+                return value
+        raise AssertionError(f"no fake response for prompt: {user[:80]!r}")
+    return handler
+
+
+def audit_llm(**overrides) -> FakeLLM:
+    """Responses for the test playbook in conftest: liability found, confidentiality missing."""
+    from auditor.audit.prompts import Evaluation, Relevance, RewrittenQueries
+
+    handlers = {
+        "Evaluation": by_rule({
+            "Liability cap": Evaluation(clause_found=True, matches_criteria=True,
+                                        reasoning="Liability is capped at fees paid.",
+                                        quotes=[LIABILITY_LINE]),
+            "Confidentiality": Evaluation(clause_found=False, matches_criteria=False,
+                                          reasoning="No confidentiality clause.", quotes=[]),
+        }),
+        "Relevance": Relevance(relevant=False),
+        "RewrittenQueries": RewrittenQueries(queries=["secret information"]),
+    }
+    handlers.update(overrides)
+    return FakeLLM(handlers)
