@@ -149,4 +149,38 @@ def test_section_cap_limits_evaluated_passages(env):
     llm = FakeLLM({"Evaluation": FOUND})
     final, _ = _run(env, _rule(queries=["agreement", "party", "liability"]), llm,
                     AuditConfig(max_sections=2))
-    assert len(final["passages"]) <= 2
+    assert len(final["passages"]) == 2
+
+
+def test_prohibited_clause_found_but_not_matching_skips_wide_scan(env):
+    found_ok = Evaluation(clause_found=True, matches_criteria=False, reasoning="Benign.",
+                          quotes=[LIABILITY_QUOTE])
+    llm = FakeLLM({"Evaluation": found_ok})
+    final, nodes = _run(env, _rule("must_not_exist"), llm)
+    assert final["status"] is Status.COMPLIANT
+    assert len(final["citations"]) == 1
+    assert nodes == ["search", "evaluate", "verify"]
+
+
+def test_rewrite_failure_sets_error(env):
+    llm = FakeLLM({"RewrittenQueries": LLMError("down")})
+    final, nodes = _run(env, _rule(queries=["zebra quantum"]), llm)
+    assert "query rewrite failed" in final["error"]
+    assert final["status"] is None
+    assert nodes == ["search", "rewrite"]
+    assert llm.count("RewrittenQueries") == 2
+
+
+def test_wide_scan_failure_sets_error(env):
+    llm = FakeLLM({"Evaluation": NOT_FOUND, "Relevance": LLMError("down")})
+    final, nodes = _run(env, _rule(), llm)
+    assert "wide scan failed" in final["error"]
+    assert nodes[-1] == "wide_scan"
+
+
+def test_evaluation_failure_after_wide_scan_sets_error(env):
+    llm = FakeLLM({"Evaluation": sequence(NOT_FOUND, LLMError("down")),
+                   "Relevance": Relevance(relevant=True)})
+    final, nodes = _run(env, _rule(), llm)
+    assert "evaluation failed" in final["error"]
+    assert final["status"] is None
