@@ -1,3 +1,4 @@
+import dataclasses
 import json
 import threading
 
@@ -7,6 +8,7 @@ from fakes import FakeEmbedder, FakeLLM, FakeReranker, FakeSparseEncoder
 
 import benchmarks.retrieval_bench as bench
 from auditor.bench.cuad import CuadContract, save_subset
+from auditor.config import Settings
 from auditor.index.qdrant_store import QdrantStore
 from auditor.ingestion.context import ContextLine
 from auditor.ingestion.indexer import Indexer
@@ -85,6 +87,8 @@ def test_context_prefix_on_the_subset(paths):
     assert [row["config"] for row in data["rows"]] == ["off", "on"]
     assert all(row["queries"] == 3 for row in data["rows"])
     assert llm.count("ContextLine") > 0
+    assert (paths["data"] / "prefix-fake-fake-eval-fake-small" / "ranks.json").exists()
+    assert not (paths["data"] / "prefix").exists()
 
 
 def test_context_prefix_stops_at_the_budget(paths, capsys):
@@ -108,3 +112,43 @@ def test_misaligned_text_stops_the_run(tmp_path):
     stack = fake_stack("structural", tmp_path)
     with pytest.raises(ValueError, match="spans would not line up"):
         bench.index_contracts([contract], stack.indexer, log=lambda message: None)
+
+
+def test_embedded_qdrant_without_url(tmp_path):
+    settings = dataclasses.replace(Settings.from_env(), qdrant_url=None)
+    store = bench._qdrant_store(settings, "semantic", tmp_path)
+    assert store._collection == "chunks"
+    assert (tmp_path / "qdrant").exists()
+
+
+def test_qdrant_server_with_url(tmp_path, monkeypatch):
+    seen = {}
+
+    class StubClient:
+        def __init__(self, **kwargs):
+            seen.update(kwargs)
+
+    monkeypatch.setattr(bench, "QdrantClient", StubClient)
+    settings = dataclasses.replace(Settings.from_env(), qdrant_url="http://localhost:6333")
+    store = bench._qdrant_store(settings, "prefix-ollama-qwen3-8b", tmp_path)
+    assert seen == {"url": "http://localhost:6333", "timeout": 60}
+    assert store._collection == "bench_prefix-ollama-qwen3-8b"
+
+
+def test_save_is_atomic(tmp_path):
+    path = tmp_path / "ranks.json"
+    bench._save(path, {"ranks": {}, "top": {"a": 1.0}})
+    assert _read(path) == {"ranks": {}, "top": {"a": 1.0}}
+    assert not path.with_suffix(".tmp").exists()
+
+
+def test_corrupt_rank_cache_is_moved_aside(paths, capsys):
+    ranks = paths["data"] / "structural" / "ranks.json"
+    ranks.parent.mkdir(parents=True)
+    ranks.write_text('{"ranks": {"bm25": {"ALPHA', encoding="utf-8")
+    assert bench.main(_args(paths, "modes"), stack_factory=fake_stack) == 0
+    corrupt = ranks.with_name("ranks.json.corrupt")
+    assert corrupt.read_text(encoding="utf-8") == '{"ranks": {"bm25": {"ALPHA'
+    assert set(_read(ranks)["ranks"]) == set(bench.MODES)
+    assert (paths["out"] / "retrieval.json").exists()
+    assert f"warning: {ranks}" in capsys.readouterr().out

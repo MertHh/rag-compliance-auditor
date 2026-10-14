@@ -6,10 +6,14 @@ clause presence from retrieval alone and picks min_rerank_score.
 Free:            python -m benchmarks.retrieval_bench --part modes --part chunking
 Context prefix:  python -m benchmarks.retrieval_bench --part prefix --provider ollama
 Index, ranks and scores are saved under --data-dir, so an interrupted run resumes.
+
+For the full run start a Qdrant server first (`docker run -d -p 6333:6333 -v qdrant-bench:/qdrant/storage qdrant/qdrant:v1.19.1`) and set QDRANT_URL=http://localhost:6333; embedded mode is fine for --contracts runs.
 """
 
 import argparse
 import json
+import os
+import re
 import threading
 import time
 from dataclasses import dataclass
@@ -19,6 +23,7 @@ from pathlib import Path
 from typing import Callable
 
 from dotenv import load_dotenv
+from qdrant_client import QdrantClient
 
 from auditor.bench.budget import Budget, BudgetExceeded
 from auditor.bench.cuad import CuadContract, clause_categories, load_cuad, load_subset, query_for
@@ -69,12 +74,18 @@ def _models(embed_model: str, rerank_model: str, device: str | None):
     return BgeM3Embedder(embed_model, device), Bm25SparseEncoder(), BgeReranker(rerank_model, device)
 
 
-def real_stack(settings: Settings, variant: str, directory: Path, contextualizer=None) -> Stack:
-    from qdrant_client import QdrantClient
+def _qdrant_store(settings: Settings, variant: str, directory: Path) -> QdrantStore:
+    """A Qdrant server when QDRANT_URL is set (one collection per variant); embedded otherwise.
+    Embedded mode scans the whole collection on filtered queries, too slow for the full run."""
+    if settings.qdrant_url:
+        return QdrantStore(QdrantClient(url=settings.qdrant_url, timeout=60), f"bench_{variant}")
+    return QdrantStore(QdrantClient(path=str(directory / "qdrant")), "chunks")
 
+
+def real_stack(settings: Settings, variant: str, directory: Path, contextualizer=None) -> Stack:
     embedder, sparse, reranker = _models(settings.embed_model, settings.rerank_model, settings.device)
     directory.mkdir(parents=True, exist_ok=True)
-    store = QdrantStore(QdrantClient(path=str(directory / "qdrant")), "chunks")
+    store = _qdrant_store(settings, variant, directory)
     docstore = DocumentStore(directory / "documents")
     chunker = partial(build_semantic_chunks, embedder=embedder) if variant == "semantic" else None
     lock = threading.Lock()
@@ -106,14 +117,28 @@ def index_contracts(contracts: list[CuadContract], indexer: Indexer,
 def _save(path: Path | None, state: dict) -> None:
     if path is not None:
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(state), encoding="utf-8")
+        tmp = path.with_suffix(".tmp")
+        tmp.write_text(json.dumps(state), encoding="utf-8")
+        os.replace(tmp, path)
+
+
+def _load(path: Path | None, log: Callable[[str], None]) -> dict:
+    empty = {"ranks": {}, "top": {}}
+    if path is None or not path.exists():
+        return empty
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        corrupt = path.with_name(path.name + ".corrupt")
+        os.replace(path, corrupt)
+        log(f"warning: {path} was not valid JSON; moved to {corrupt}, starting over")
+        return empty
 
 
 def evaluate(contracts: list[CuadContract], ids: dict[str, str], retriever: Retriever,
              details: dict[str, str], modes: list[str], cache_path: Path | None,
              log: Callable[[str], None] = print) -> dict:
-    state = (json.loads(cache_path.read_text(encoding="utf-8"))
-             if cache_path is not None and cache_path.exists() else {"ranks": {}, "top": {}})
+    state = _load(cache_path, log)
     for mode in modes:
         state["ranks"].setdefault(mode, {})
     categories = clause_categories(details)
@@ -221,7 +246,8 @@ def run_prefix(contracts, details, factory, data_dir: Path, out_dir: Path, provi
         seen[0] = contextualizer.usage.cost_usd
         budget.check(remaining)
 
-    on = _evaluated("prefix", contracts, details, [RERANKED], factory, data_dir, log,
+    slug = re.sub(r"[^a-z0-9]+", "-", f"{provider.name}-{models_label(provider)}".lower()).strip("-")
+    on = _evaluated(f"prefix-{slug}", contracts, details, [RERANKED], factory, data_dir, log,
                     contextualizer=contextualizer, on_indexed=guard)
     label = f"{provider.name} {models_label(provider)}"
     rows = [_rank_row("off", [off["ranks"][RERANKED][k] for k in keys], **{"context model": "-"}),
