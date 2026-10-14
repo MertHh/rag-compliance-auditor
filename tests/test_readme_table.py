@@ -50,9 +50,52 @@ def test_main_writes_and_checks(tmp_path, capsys):
     readme.write_text(f"# X\n{table.START}\n{table.END}\n", encoding="utf-8")
     args = ["--readme", str(readme), "--results", str(results)]
     assert table.main([*args, "--check"]) == 1
-    assert table.main(args) == 0
+    assert table.main(args) == 1  # presence.json is broken: README is written, exit is 1
     assert "### Retrieval" in readme.read_text(encoding="utf-8")
+    assert "unreadable result files: presence.json" in capsys.readouterr().err
+    assert table.main([*args, "--check"]) == 1
+
+
+def test_main_exits_zero_when_every_file_is_readable(tmp_path):
+    results = _results(tmp_path)
+    (results / "presence.json").unlink()
+    readme = tmp_path / "README.md"
+    readme.write_text(f"# X\n{table.START}\n{table.END}\n", encoding="utf-8")
+    args = ["--readme", str(readme), "--results", str(results)]
+    assert table.main(args) == 0
     assert table.main([*args, "--check"]) == 0
+
+
+def test_multiline_error_renders_on_one_quoted_line():
+    result = {"file": "bad.json", "title": "bad", "created_at": None, "rows": [], "notes": "",
+              "error": "unreadable result file: 2 validation errors\nrows.0.x\n  Input should be a valid number"}
+    text = table.render([result])
+    quoted = [line for line in text.splitlines() if line.startswith("> ")]
+    assert quoted == ["> bad.json: unreadable result file: 2 validation errors rows.0.x Input should be a valid number"]
+    assert "Input should" not in [line.strip() for line in text.splitlines() if not line.startswith("> ")]
+
+
+def test_long_error_is_cut_to_200_characters():
+    result = {"file": "bad.json", "title": "bad", "created_at": None, "rows": [], "notes": "",
+              "error": "x" * 500}
+    quoted = table.render([result]).splitlines()[-3]
+    assert quoted == "> bad.json: " + "x" * 200 + "…"
+
+
+def test_newlines_and_pipes_in_cells_headers_and_titles_stay_inline():
+    result = {"file": "a.json", "title": "Retr\nieval | x", "created_at": None, "notes": "two\nlines",
+              "rows": [{"con\nfig|": "a\nb|c", "recall@5": 0.5}], "error": None}
+    text = table.render([result])
+    assert "### Retr ieval \\| x" in text
+    assert "| con fig\\| | recall@5 |" in text
+    assert "| a b\\|c | 0.5 |" in text
+    assert "- two lines" in text
+
+
+def test_small_floats_keep_their_magnitude():
+    result = {"file": "a.json", "title": "T", "created_at": None, "notes": "",
+              "rows": [{"config": "c", "p": 1e-05, "q": 0.25}], "error": None}
+    assert "| c | 1e-05 | 0.25 |" in table.render([result])
 
 
 def test_main_leaves_readme_without_markers_untouched(tmp_path):

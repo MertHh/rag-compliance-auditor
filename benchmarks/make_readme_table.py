@@ -3,6 +3,8 @@ benchmarks/results/*.json only; numbers are never typed by hand.
 
 Run: python -m benchmarks.make_readme_table           rewrite README.md
      python -m benchmarks.make_readme_table --check   exit 1 when README.md is out of date
+
+Exit 1 also when any result file is unreadable; the README still shows the error line.
 """
 
 import argparse
@@ -14,11 +16,17 @@ from auditor.benchmark_results import load_results
 START = "<!-- BENCHMARKS:START -->"
 END = "<!-- BENCHMARKS:END -->"
 ORDER = ("retrieval", "chunking", "context_prefix", "presence", "audit")
+ERROR_LIMIT = 200
 
 
 def _rank(result: dict) -> int:
     stem = result["file"].removesuffix(".json")
     return next((i for i, prefix in enumerate(ORDER) if stem.startswith(prefix)), len(ORDER))
+
+
+def _inline(text) -> str:
+    """One line, no table-breaking pipes: whitespace collapsed, '|' escaped."""
+    return " ".join(str(text).split()).replace("|", "\\|")
 
 
 def _cell(value) -> str:
@@ -27,8 +35,17 @@ def _cell(value) -> str:
     if isinstance(value, bool):
         return "yes" if value else "no"
     if isinstance(value, float):
+        if 0 < abs(value) < 1e-3:
+            return f"{value:.4g}"
         return f"{value:.4f}".rstrip("0").rstrip(".")
-    return str(value).replace("|", "\\|")
+    return _inline(value)
+
+
+def _error_line(result: dict) -> str:
+    message = " ".join(str(result["error"]).split())
+    if len(message) > ERROR_LIMIT:
+        message = message[:ERROR_LIMIT] + "…"
+    return f"> {_inline(result['file'])}: {_inline(message)}"
 
 
 def render(results: list[dict]) -> str:
@@ -37,20 +54,20 @@ def render(results: list[dict]) -> str:
         groups.setdefault(result["title"], []).append(result)
     sections = []
     for title, items in groups.items():
-        lines = [f"### {title}", ""]
+        lines = [f"### {_inline(title)}", ""]
         rows = [row for item in items if not item["error"] for row in item["rows"]]
         if rows:
             columns = list(dict.fromkeys(key for row in rows for key in row))
-            lines.append("| " + " | ".join(columns) + " |")
+            lines.append("| " + " | ".join(_inline(c) for c in columns) + " |")
             lines.append("|" + "|".join(" --- " for _ in columns) + "|")
             lines.extend("| " + " | ".join(_cell(row.get(c)) for c in columns) + " |" for row in rows)
-        lines.extend(f"> {item['file']}: {item['error']}" for item in items if item["error"])
+        lines.extend(_error_line(item) for item in items if item["error"])
         notes = [item["notes"] for item in items if item["notes"]]
         dates = sorted({item["created_at"] for item in items if item["created_at"]})
-        files = ", ".join(item["file"] for item in items)
+        files = ", ".join(_inline(item["file"]) for item in items)
         lines.append("")
-        lines.append(f"_Source: {files}" + (f"; measured {', '.join(dates)}" if dates else "") + "._")
-        lines.extend(f"- {note}" for note in notes)
+        lines.append(f"_Source: {files}" + (f"; measured {', '.join(_inline(d) for d in dates)}" if dates else "") + "._")
+        lines.extend(f"- {_inline(note)}" for note in notes)
         sections.append("\n".join(lines))
     return "\n\n".join(sections) if sections else "_No benchmark results yet._"
 
@@ -70,19 +87,25 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     readme = Path(args.readme)
     text = readme.read_text(encoding="utf-8")
+    results = load_results(Path(args.results))
     try:
-        updated = update_readme(text, render(load_results(Path(args.results))))
+        updated = update_readme(text, render(results))
     except ValueError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
+    status = 0
+    broken = [r["file"] for r in results if r["error"]]
+    if broken:
+        print(f"error: unreadable result files: {', '.join(broken)}", file=sys.stderr)
+        status = 1
     if args.check:
         if updated != text:
             print("README.md benchmark tables are out of date; run python -m benchmarks.make_readme_table")
-            return 1
-        return 0
+            status = 1
+        return status
     if updated != text:
         readme.write_text(updated, encoding="utf-8")
-    return 0
+    return status
 
 
 if __name__ == "__main__":
