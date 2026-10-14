@@ -17,6 +17,7 @@ from auditor.audit.prompts import Evaluation
 from auditor.audit.runner import Auditor, cache_key
 from auditor.index.qdrant_store import QdrantStore
 from auditor.ingestion.indexer import Indexer
+from auditor.lazy import Lazy
 from auditor.llm.base import ProviderUnavailableError
 from auditor.retrieval.pipeline import Retriever
 from auditor.storage.db import AuditStore
@@ -31,6 +32,7 @@ def env(tmp_path, make_pdf, playbooks_dir):
     pdf = make_pdf(tmp_path / "contract.pdf", CONTRACT_PAGES)
     doc_id = Indexer(store, embedder, sparse, docstore).ingest_pdf(pdf).document_id
     return SimpleNamespace(
+        store=store,
         retriever=Retriever(store, embedder, sparse, FakeReranker(), docstore),
         docstore=docstore,
         audits=AuditStore(tmp_path / "auditor.db"),
@@ -158,3 +160,33 @@ def test_cache_key_changes_with_each_part():
         cache_key("doc", "pb", "openai", "m1", prompt_version="999"),
     }
     assert base not in others and len(others) == 5
+
+
+def test_prepare_then_execute_with_given_id(env):
+    auditor = _auditor(env, audit_llm())
+    prepared = auditor.prepare(env.doc_id, "test_pb", "openai")
+    assert prepared.document_id == env.doc_id and prepared.playbook.key == "test_pb"
+    assert auditor.cached(prepared) is None
+
+    report = auditor.execute(prepared, "a" * 32)
+    assert report["audit_id"] == "a" * 32
+    assert env.audits.get_report("a" * 32)["risk_score"] == 40.0
+    assert auditor.cached(prepared)["cached"] is True
+
+
+def test_cached_audit_does_not_load_models(env):
+    _auditor(env, audit_llm()).run(env.doc_id, "test_pb", "openai")
+    loaded = []
+
+    def never(name):
+        def factory():
+            loaded.append(name)
+            raise AssertionError(f"{name} was loaded")
+        return Lazy(factory)
+
+    retriever = Retriever(env.store, never("embedder"), never("sparse"), never("reranker"),
+                          env.docstore)
+    auditor = Auditor(retriever, env.docstore, env.audits, env.playbooks, lambda name: audit_llm())
+    report = auditor.run(env.doc_id, "test_pb", "openai")
+    assert report["cached"] is True
+    assert loaded == []
