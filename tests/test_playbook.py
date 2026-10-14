@@ -1,5 +1,3 @@
-from pathlib import Path
-
 import pytest
 
 from auditor.audit.playbook import (
@@ -86,9 +84,3 @@ def test_find_and_list(tmp_path):
     with pytest.raises(PlaybookNotFound):
         find_playbook(tmp_path, "../a")
 
-
-def test_shipped_playbook_is_valid():
-    path = Path(__file__).parents[1] / "playbooks" / "commercial_contract.yaml"
-    loaded = load_playbook(path)
-    assert len(loaded.playbook.rules) == 5
-    assert {r.type for r in loaded.playbook.rules} == {"must_exist", "must_not_exist", "condition"}

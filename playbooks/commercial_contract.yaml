@@ -30,3 +30,81 @@ rules:
     severity: high
     queries: ["unlimited liability", "liability shall not be limited"]
     criteria: "A party's liability is unlimited or expressly excluded from any cap for all claims."
+  - id: anti_assignment
+    title: Assignment needs consent
+    type: must_exist
+    severity: medium
+    queries: ["assignment of this agreement requires consent", "may not assign or transfer this agreement"]
+    criteria: "A party may assign or transfer the contract to a third party only with the other party's consent or after notice."
+  - id: change_of_control
+    title: Change of control
+    type: must_exist
+    severity: low
+    queries: ["change of control of a party", "merger acquisition consent termination right"]
+    criteria: "The contract addresses a change of control of a party, such as requiring consent or notice or giving a termination right."
+  - id: non_compete
+    title: Non-compete restriction
+    type: must_not_exist
+    severity: medium
+    queries: ["shall not compete", "non-competition restriction territory"]
+    criteria: "A party is restricted from competing with the other party or from operating in a market, field or territory."
+  - id: exclusivity
+    title: Exclusive dealing
+    type: must_not_exist
+    severity: medium
+    queries: ["exclusive supplier exclusive distributor", "shall purchase exclusively from"]
+    criteria: "A party commits to deal exclusively with the other party, or to buy all or most of its requirements from it."
+  - id: audit_rights
+    title: Audit rights
+    type: must_exist
+    severity: medium
+    queries: ["right to audit books and records", "inspect records audit compliance"]
+    criteria: "A party may audit or inspect the other party's books, records or premises to check compliance with the contract."
+  - id: insurance
+    title: Insurance requirement
+    type: must_exist
+    severity: medium
+    queries: ["maintain insurance coverage", "general liability insurance policy limits"]
+    criteria: "A party must maintain insurance, such as general or professional liability insurance, for the benefit of the other party."
+  - id: warranty_duration
+    title: Warranty period stated
+    type: condition
+    severity: low
+    queries: ["warranty period", "warrants that the products will be free from defects for"]
+    criteria: "If the contract gives a warranty on products or services, it states how long the warranty lasts."
+  - id: ip_ownership
+    title: Ownership of created IP
+    type: must_exist
+    severity: medium
+    queries: ["intellectual property created under this agreement shall be owned by", "assigns all right title and interest"]
+    criteria: "The contract states who owns intellectual property created under it, or assigns that property to a party."
+  - id: liquidated_damages
+    title: Liquidated damages
+    type: must_not_exist
+    severity: low
+    queries: ["liquidated damages", "termination fee payable upon breach"]
+    criteria: "A party must pay liquidated damages or a fixed fee upon breach or early termination."
+  - id: minimum_commitment
+    title: Minimum purchase commitment
+    type: must_not_exist
+    severity: medium
+    queries: ["minimum purchase commitment", "minimum order quantity per year"]
+    criteria: "A party must buy a minimum amount, volume or number of units in a period."
+  - id: post_termination_services
+    title: Obligations after termination
+    type: must_exist
+    severity: low
+    queries: ["obligations upon termination or expiration", "transition services after termination survive"]
+    criteria: "The contract states obligations that continue after termination or expiry, such as transition services, return of materials or surviving terms."
+  - id: third_party_beneficiary
+    title: Third-party beneficiaries
+    type: must_not_exist
+    severity: low
+    queries: ["third party beneficiary", "may be enforced by a person who is not a party"]
+    criteria: "A person who is not a party may enforce or benefit from the contract's terms."
+  - id: renewal_term
+    title: Automatic renewal can be stopped
+    type: condition
+    severity: medium
+    queries: ["automatically renew for successive terms", "notice of non-renewal before the end of the term"]
+    criteria: "If the contract renews automatically, a party may stop the renewal by giving notice before the term ends."
