@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 
 from auditor.api.routes.deps import ServicesDep
 from auditor.api.schemas import Filters, ProviderName
+from auditor.llm.base import ProviderUnavailableError
 from auditor.qa.answer import QuestionAnswerer
 from auditor.retrieval.config import RetrievalConfig
 
@@ -41,7 +42,10 @@ def search(body: SearchRequest, services: ServicesDep) -> dict:
 
 @router.post("/ask")
 def ask(body: AskRequest, services: ServicesDep) -> dict:
-    provider = services.provider(body.provider or services.default_provider)
+    try:
+        provider = services.provider(body.provider or services.default_provider)
+    except ValueError as exc:  # e.g. malformed price settings
+        raise ProviderUnavailableError(str(exc)) from exc
     provider.check_available()
     answer = QuestionAnswerer(services.retriever, services.docstore, provider).ask(
         body.question, body.filters.to_filter()

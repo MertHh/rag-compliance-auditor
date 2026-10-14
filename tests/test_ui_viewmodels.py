@@ -12,6 +12,7 @@ from viewmodels import (
     document_rows,
     finding_rows,
     label_column,
+    md_escape,
     numeric_columns,
     rule_totals,
     run_label,
@@ -128,3 +129,10 @@ def test_benchmark_columns():
     assert numeric_columns(rows) == ["recall@5", "mrr"]
     assert label_column(rows) == "config"
     assert numeric_columns([]) == [] and label_column([]) is None
+
+
+def test_md_escape_keeps_dollar_amounts_literal():
+    assert md_escape("$500,000 or $1,000,000 *x*") == r"\$500,000 or \$1,000,000 \*x\*"
+    assert md_escape(r"a_b [c](d) `e` <f> #g \ ") == r"a\_b \[c\](d) \`e\` \<f\> \#g \\ "
+    assert md_escape("- item\n  + sub\n1. one") == "\\- item\n  \\+ sub\n1\\. one"
+    assert md_escape("") == ""

@@ -26,6 +26,21 @@ NODE_ORDER = ["search", "rewrite", "evaluate", "verify", "wide_scan"]
 NODE_COLORS = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4"]
 
 _SPACES = re.compile(r"\s+")
+_MD_SPECIAL = re.compile(r"([\\$*_`\[\]<>#~|])")
+# List markers at a line start: "- x", "+ x", "1. x".
+_MD_LINE_START = re.compile(r"^(\s*)(?:([-+])|(\d+)\.)(?=\s|$)", re.MULTILINE)
+
+
+def _escape_list_marker(match: re.Match) -> str:
+    indent, sign, number = match.groups()
+    return indent + ("\\" + sign if sign else number + "\\.")
+
+
+def md_escape(text: str) -> str:
+    """Escapes contract or LLM text for st.markdown, so "$500" stays money rather than LaTeX
+    and stray *, _, # or list markers do not turn into formatting."""
+    escaped = _MD_SPECIAL.sub(r"\\\1", text)
+    return _MD_LINE_START.sub(_escape_list_marker, escaped)
 
 
 def status_label(status: str) -> str:

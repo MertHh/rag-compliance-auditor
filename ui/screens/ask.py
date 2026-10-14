@@ -2,7 +2,7 @@ import streamlit as st
 
 import shared
 from apiclient import ApiError
-from viewmodels import SEARCH_COLOR, bbox_annotations, document_label
+from viewmodels import SEARCH_COLOR, bbox_annotations, document_label, md_escape
 
 client = shared.get_client()
 st.title("Ask the documents")
@@ -33,20 +33,20 @@ if result is None:
 if not result["found"]:
     st.info(result["message"])
     for passage in result["passages"]:
-        with st.expander(f"Nearest passage · section {passage['section_path'] or '-'}"):
-            st.write(passage["text"])
+        with st.expander(f"Nearest passage · section {md_escape(passage['section_path'] or '-')}"):
+            st.markdown(md_escape(passage["text"]))
     st.stop()
 
-st.markdown(f"**{result['answer']}**")
+st.markdown(f"**{md_escape(result['answer'])}**")
 usage = result["usage"]
 st.caption(f"{result['model']} · {usage['input_tokens']}/{usage['output_tokens']} tokens · "
            f"${usage['cost_usd']:.4f}")
 for number, citation in enumerate(result["citations"], start=1):
-    st.markdown(f"> {citation['quote']}")
+    st.markdown(f"> {md_escape(citation['quote'])}")
     source = by_id.get(citation["document_id"])
     name = document_label(source) if source else citation["document_id"][:12]
     st.caption(f"[{number}] {name} · page {citation['page'] or '-'} · "
-               f"section {citation['section_path'] or '-'}")
+               f"section {md_escape(citation['section_path'] or '-')}")
 
 first = result["citations"][0]["document_id"]
 boxes = [box for c in result["citations"] if c["document_id"] == first for box in c["bboxes"]]

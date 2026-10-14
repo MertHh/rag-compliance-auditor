@@ -112,3 +112,10 @@ def test_very_long_filename_is_accepted(api, contract_pdf):
         response = api.post("/documents", files={"file": ("x" * 300 + ".pdf", fh, "application/pdf")})
     assert response.status_code == 200
     assert len(response.json()["document"]["filename"]) <= 154
+
+
+def test_invalid_upload_date_is_rejected(api, contract_pdf):
+    response = _upload(api, contract_pdf, date="March 2024")
+    assert response.status_code == 422
+    assert "YYYY-MM-DD" in response.json()["detail"]
+    assert api.get("/documents").json() == []

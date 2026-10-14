@@ -4,7 +4,7 @@ import streamlit as st
 
 import shared
 from apiclient import ApiError
-from viewmodels import citation_annotations, finding_rows, run_label, status_label
+from viewmodels import citation_annotations, finding_rows, md_escape, run_label, status_label
 
 client = shared.get_client()
 st.title("Audit")
@@ -111,7 +111,7 @@ cost_col.metric("Cost", f"${report['totals']['cost_usd']:.4f}")
 saved = st.session_state.get("audit_saved") or report.get("cached")
 st.caption(("Saved run · " if saved else "") + run_label(report))
 for error in report["errors"]:
-    st.error(f"{error['rule_id']}: {error['message']}")
+    st.error(md_escape(f"{error['rule_id']}: {error['message']}"))
 st.dataframe(finding_rows(report), hide_index=True)
 
 findings = {f["rule_id"]: f for f in report["findings"]}
@@ -123,13 +123,14 @@ with details:
     st.markdown(f"**{status_label(finding['status'])}** · severity {finding['severity']} · "
                 f"risk {finding['risk']}")
     if finding["reasoning"]:
-        st.write(finding["reasoning"])
+        st.markdown(md_escape(finding["reasoning"]))
     evidence = finding["evidence"]
     st.caption(f"Evidence: {evidence['queries_tried']} queries tried, "
                f"{evidence['sections_examined']} sections examined")
     for citation in finding["citations"]:
-        st.markdown(f"> {citation['quote']}")
-        st.caption(f"page {citation['page'] or '-'} · section {citation['section_path'] or '-'}")
+        st.markdown(f"> {md_escape(citation['quote'])}")
+        st.caption(f"page {citation['page'] or '-'} · "
+                   f"section {md_escape(citation['section_path'] or '-')}")
     current = finding["review"]
     with st.form(f"review_{audit_id}_{rule_id}"):
         decision = st.radio("Review", ["accepted", "rejected"], horizontal=True,

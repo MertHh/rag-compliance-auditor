@@ -149,7 +149,7 @@ def audit_llm(**overrides) -> FakeLLM:
     return FakeLLM(handlers)
 
 
-def fake_services(tmp_path, playbooks_dir, llm, benchmarks_dir=None):
+def fake_services(tmp_path, playbooks_dir, llm, benchmarks_dir=None, provider=None):
     """Services wired with in-memory Qdrant, fake models and one fake LLM for every provider."""
     from auditor.audit.runner import Auditor
     from auditor.index.qdrant_store import QdrantStore
@@ -166,8 +166,9 @@ def fake_services(tmp_path, playbooks_dir, llm, benchmarks_dir=None):
     retriever = Retriever(store, embedder, sparse, FakeReranker(), docstore, lock)
     audits = AuditStore(tmp_path / "auditor.db")
 
-    def provider(name):
-        return llm
+    if provider is None:
+        def provider(name):
+            return llm
 
     return Services(
         indexer=Indexer(store, embedder, sparse, docstore, lock=lock),

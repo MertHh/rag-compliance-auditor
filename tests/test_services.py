@@ -23,6 +23,7 @@ def test_models_load_on_warm_up_not_on_build(tmp_path, monkeypatch):
     services = build_services(settings)
     try:
         assert built == []
+        assert services.retriever._lock is services.indexer._lock
         assert services.playbooks_dir == tmp_path / "pb"
         assert services.benchmarks_dir == tmp_path / "bench"
         services.warm_up()

@@ -8,6 +8,7 @@ from fastapi.responses import FileResponse
 
 from auditor.api.routes.deps import ServicesDep
 from auditor.api.schemas import ProviderName
+from auditor.index.store import date_to_int
 from auditor.ingestion.metadata import MetadataExtractor
 from auditor.llm.base import ProviderUnavailableError
 from auditor.services import Services
@@ -85,6 +86,7 @@ def upload(
         "jurisdiction": (jurisdiction or "").strip() or None,
         "parties": [p.strip() for p in parties or [] if p.strip()] or None,
     }
+    date_to_int(given["date"])  # a date filters cannot read would hide the document
     warnings: list[str] = []
     extractor = None
     if extract_metadata:

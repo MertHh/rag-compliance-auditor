@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import fake_api
 import pdfview
 import pytest
 import shared
@@ -86,6 +87,36 @@ def test_ask_found_shows_answer_and_quote(fake):
     assert not at.exception
     assert any("Liability is capped" in text for text in texts(at.markdown))
     assert fake.shown[-1][0] == "ask_pdf"
+
+
+def test_ask_dollar_amounts_are_not_math(fake):
+    original = fake.ask
+
+    def ask(question, filters=None, provider=None):
+        result = original(question, filters, provider)
+        quote = "Liability shall not exceed $500,000 or $1,000,000."
+        return {**result, "answer": "The cap is $500,000.",
+                "citations": [{**result["citations"][0], "quote": quote}]}
+
+    fake.ask = ask
+    at = run_screen("ask")
+    at.text_input[0].input("What is the cap?")
+    at.button[0].click().run()
+    assert not at.exception
+    shown = texts(at.markdown)
+    assert any(r"The cap is \$500,000." in text for text in shown)
+    assert any(r"\$500,000 or \$1,000,000" in text for text in shown)
+
+
+def test_audit_reasoning_and_quote_keep_dollar_amounts(fake):
+    finding = {**fake_api.REPORT["findings"][0], "reasoning": "Cap is $500,000 or $1,000,000.",
+               "citations": [{**fake_api.CITATION, "quote": "not exceed $500,000"}]}
+    fake.audit = lambda audit_id: ("done", {**fake_api.REPORT, "findings": [finding]})
+    at = run_screen("audit", audit_id=AUDIT_ID, audit_saved=True)
+    assert not at.exception
+    shown = texts(at.markdown)
+    assert r"Cap is \$500,000 or \$1,000,000." in shown
+    assert any(r"not exceed \$500,000" in text for text in shown)
 
 
 def test_ask_not_found_shows_message_and_nearest(fake):
@@ -217,3 +248,14 @@ def test_lost_audit_shows_error_without_polling(fake):
     assert "audit x not found" in texts(at.error)
     assert not any("Audit running" in text for text in texts(at.info))
     assert "audit_id" not in at.session_state
+
+
+def test_viewer_key_changes_with_the_boxes():
+    boxes = [{"page": 2, "x": 72.0, "y": 90.0, "width": 348.0, "height": 14.0, "color": "#2a78d6"}]
+    same = [dict(reversed(list(boxes[0].items())))]
+    assert pdfview.viewer_key("ask_pdf", boxes) == pdfview.viewer_key("ask_pdf", same)
+    assert pdfview.viewer_key("ask_pdf", boxes).startswith("ask_pdf_")
+    assert pdfview.viewer_key("ask_pdf", boxes) != pdfview.viewer_key("ask_pdf", [])
+    moved = [{**boxes[0], "page": 3}]
+    assert pdfview.viewer_key("ask_pdf", boxes) != pdfview.viewer_key("ask_pdf", moved)
+    assert pdfview.viewer_key("ask_pdf", boxes) != pdfview.viewer_key("audit_pdf", boxes)

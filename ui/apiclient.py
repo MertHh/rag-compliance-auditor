@@ -41,6 +41,9 @@ class ApiClient:
     def _request(self, method: str, path: str, **kwargs) -> httpx.Response:
         try:
             response = self._http.request(method, path, **kwargs)
+        except httpx.TimeoutException as exc:
+            raise ApiError(0, f"API did not answer within the time limit ({self._http.base_url}); "
+                              "it may still be working") from exc
         except httpx.TransportError as exc:
             raise ApiError(0, f"API unreachable at {self._http.base_url}: {exc}") from exc
         if response.status_code >= 400:

@@ -81,3 +81,13 @@ def test_ask_provider_errors(tmp_path, playbooks_dir, contract_pdf):
 
 def test_ask_rejects_unknown_provider(api):
     assert api.post("/ask", json={"question": "x", "provider": "gemini"}).status_code == 422
+
+
+def test_ask_provider_config_error_is_503(tmp_path, playbooks_dir):
+    def broken(name):
+        raise ValueError("bad OPENAI_PRICES")
+
+    services = fake_services(tmp_path, playbooks_dir, FakeLLM(), provider=broken)
+    with TestClient(create_app(services)) as client:
+        response = client.post("/ask", json={"question": "liability"})
+    assert (response.status_code, response.json()) == (503, {"detail": "bad OPENAI_PRICES"})

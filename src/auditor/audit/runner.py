@@ -11,7 +11,7 @@ from auditor.audit.playbook import LoadedPlaybook, find_playbook
 from auditor.audit.prompts import PROMPT_VERSION
 from auditor.audit.report import build_finding, build_report
 from auditor.audit.trace import TraceRecorder
-from auditor.llm.base import LLMProvider, models_label
+from auditor.llm.base import LLMProvider, ProviderUnavailableError, models_label
 from auditor.retrieval.pipeline import Retriever
 from auditor.storage.db import AuditStore
 from auditor.storage.docstore import DocumentNotFound, DocumentStore
@@ -47,7 +47,10 @@ class Auditor:
         if not self._docstore.exists(document_id):
             raise DocumentNotFound(document_id)
         loaded = find_playbook(self._playbooks_dir, playbook_key)
-        provider = self._providers(provider_name)
+        try:
+            provider = self._providers(provider_name)
+        except ValueError as exc:  # e.g. an unknown provider or malformed price settings
+            raise ProviderUnavailableError(str(exc)) from exc
         provider.check_available()
         key = cache_key(document_id, loaded.sha256, provider.name, models_label(provider))
         return PreparedAudit(document_id, loaded, provider, key)

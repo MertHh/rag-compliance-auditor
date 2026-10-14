@@ -80,3 +80,15 @@ def test_non_json_error_body_is_used_as_text():
     with pytest.raises(ApiError) as info:
         client.playbooks()
     assert (info.value.status, info.value.detail) == (502, "Bad Gateway")
+
+
+def test_read_timeout_is_not_reported_as_unreachable():
+    def slow(request):
+        raise httpx.ReadTimeout("timed out", request=request)
+
+    client = ApiClient(httpx.Client(base_url="http://api.local", transport=httpx.MockTransport(slow)))
+    with pytest.raises(ApiError) as info:
+        client.documents()
+    assert info.value.status == 0
+    assert info.value.detail == ("API did not answer within the time limit (http://api.local); "
+                                 "it may still be working")

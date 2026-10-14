@@ -132,3 +132,14 @@ def test_trace_review_and_unknown_ids(api, api_services, contract_pdf):
     assert api.get(f"/audits/{unknown}/trace").status_code == 404
     assert api.post(f"/audits/{unknown}/findings/liability_cap/review",
                     json={"decision": "accepted"}).status_code == 404
+
+
+def test_provider_config_error_is_503(tmp_path, playbooks_dir, contract_pdf):
+    def broken(name):
+        raise ValueError("bad OPENAI_PRICES")
+
+    services = fake_services(tmp_path, playbooks_dir, FakeLLM(), provider=broken)
+    document_id = _ingest(services, contract_pdf)
+    with TestClient(create_app(services)) as client:
+        response = client.post("/audits", json={"document_id": document_id, "playbook": "test_pb"})
+    assert (response.status_code, response.json()) == (503, {"detail": "bad OPENAI_PRICES"})

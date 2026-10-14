@@ -41,7 +41,7 @@ if not shown:
 
 chart = (
     alt.Chart(pd.DataFrame(shown))
-    .mark_bar(cornerRadius=3, height=14)
+    .mark_bar(cornerRadius=3, height=16)
     .encode(
         x=alt.X("start_s:Q", title="Seconds since the audit started"),
         x2="end_s:Q",
@@ -58,7 +58,7 @@ chart = (
             alt.Tooltip("output:N", title="Output"),
         ],
     )
-    .properties(height=max(120, 30 * len(picked)))
+    .properties(height=alt.Step(28))  # one 28 px row per rule; legend and axis come on top
 )
 st.altair_chart(chart, width="stretch")
 st.dataframe(rule_totals(shown), hide_index=True)
