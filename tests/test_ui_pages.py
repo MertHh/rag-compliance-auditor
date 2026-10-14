@@ -4,7 +4,7 @@ import pdfview
 import pytest
 import shared
 from apiclient import ApiError
-from fake_api import DOC_ID, FakeApi
+from fake_api import AUDIT_ID, DOC_ID, FakeApi
 from streamlit.testing.v1 import AppTest
 
 UI = Path(__file__).resolve().parents[1] / "ui"
@@ -113,3 +113,69 @@ def test_ask_error_drops_previous_answer(fake):
     assert not at.exception
     assert "Ollama is not reachable" in texts(at.error)
     assert not any("Liability is capped" in text for text in texts(at.markdown))
+
+
+def test_audit_shows_saved_report(fake):
+    at = run_screen("audit", audit_id=AUDIT_ID, audit_saved=True)
+    assert not at.exception
+    assert at.metric[0].value == "40.0"
+    assert any(text.startswith("Saved run · 2026-10-14 09:30 UTC") for text in texts(at.caption))
+    table = at.dataframe[0].value
+    assert table["Status"].tolist() == ["✅ Compliant", "🟠 Missing"]
+    assert any("broken.yaml: bad" in text for text in texts(at.warning))
+    key, annotations = fake.shown[-1]
+    assert key == "audit_pdf" and annotations[0]["color"] == "#0ca30c"
+
+
+def test_run_audit_shows_running_state(fake):
+    fake.audit_state = "running"
+    at = run_screen("audit")
+    at.button(key="run_audit").click().run()
+    assert not at.exception
+    assert ("start_audit", DOC_ID, "test_pb", "openai", False) in fake.calls
+    assert any("Audit running" in text for text in texts(at.info))
+
+
+def test_cached_start_is_labelled_saved(fake):
+    at = run_screen("audit")
+    at.button(key="run_audit").click().run()
+    assert not at.exception
+    assert any(text.startswith("Saved run") for text in texts(at.caption))
+
+
+def test_review_is_sent(fake):
+    at = run_screen("audit", audit_id=AUDIT_ID, audit_saved=True)
+    at.radio[0].set_value("rejected")
+    at.text_area[0].input("Cap excludes IP claims")
+    next(button for button in at.button if button.label == "Save review").click().run()
+    assert not at.exception
+    assert ("review", AUDIT_ID, "liability_cap", "rejected", "Cap excludes IP claims") in fake.calls
+
+
+def test_report_for_another_document_is_not_shown(fake):
+    at = run_screen("audit", audit_id=AUDIT_ID, document_id=DOC_ID)
+    fake.docs = [{**fake.docs[0], "document_id": "ef" * 32}]
+    at.run()
+    assert not at.exception
+    assert len(at.metric) == 0
+
+
+def test_trace_shows_totals(fake):
+    at = run_screen("trace", audit_id=AUDIT_ID)
+    assert not at.exception
+    totals = at.dataframe[0].value
+    assert totals["Rule"].tolist() == ["liability_cap"]
+    assert totals["Steps"].tolist() == [2]
+
+
+def test_benchmarks_show_table_and_notes(fake):
+    at = run_screen("benchmarks")
+    assert not at.exception
+    assert at.dataframe[0].value["recall@5"].tolist() == [0.61, 0.78]
+    assert "50 contracts" in texts(at.caption)
+
+
+def test_benchmarks_empty(fake):
+    fake.benchmarks = lambda: []
+    at = run_screen("benchmarks")
+    assert any("No benchmark results yet" in text for text in texts(at.info))
