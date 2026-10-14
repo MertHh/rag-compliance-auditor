@@ -48,3 +48,28 @@ def _make_pdf(path, pages, password=None) -> Path:
 @pytest.fixture
 def make_pdf():
     return _make_pdf
+
+
+TEST_PLAYBOOK = """name: Test playbook
+rules:
+  - id: liability_cap
+    title: Liability cap
+    type: must_exist
+    severity: high
+    queries: ["total liability fees"]
+    criteria: "Total liability is capped at a stated amount or formula."
+  - id: confidentiality
+    title: Confidentiality
+    type: must_exist
+    severity: medium
+    queries: ["confidential information disclosure"]
+    criteria: "Each party must keep the other party's information confidential."
+"""
+
+
+@pytest.fixture
+def playbooks_dir(tmp_path):
+    directory = tmp_path / "playbooks"
+    directory.mkdir()
+    (directory / "test_pb.yaml").write_text(TEST_PLAYBOOK, encoding="utf-8")
+    return directory

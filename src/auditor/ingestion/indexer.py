@@ -10,6 +10,7 @@ from auditor.ingestion.structure import detect_sections
 from auditor.storage.docstore import DocumentStore
 
 Contextualizer = Callable[[ParsedDocument, Chunk], str]
+MetadataFn = Callable[[ParsedDocument], dict]
 
 
 class EmptyDocumentError(Exception):
@@ -43,15 +44,17 @@ class Indexer:
         self._max_parent_tokens = max_parent_tokens
         self._contextualizer = contextualizer
 
-    def ingest_pdf(self, path: str | Path, metadata: dict | None = None) -> IngestResult:
+    def ingest_pdf(self, path: str | Path, metadata: dict | None = None, *,
+                   extract_metadata: MetadataFn | None = None) -> IngestResult:
         doc = parse_pdf(path)
-        return self._index(doc, metadata, Path(path).read_bytes())
+        return self._index(doc, metadata, Path(path).read_bytes(), extract_metadata)
 
-    def ingest_text(self, text: str, filename: str, metadata: dict | None = None) -> IngestResult:
-        return self._index(parse_text(text, filename), metadata, None)
+    def ingest_text(self, text: str, filename: str, metadata: dict | None = None, *,
+                    extract_metadata: MetadataFn | None = None) -> IngestResult:
+        return self._index(parse_text(text, filename), metadata, None, extract_metadata)
 
-    def _index(self, doc: ParsedDocument, metadata: dict | None,
-               source_pdf: bytes | None) -> IngestResult:
+    def _index(self, doc: ParsedDocument, metadata: dict | None, source_pdf: bytes | None,
+               extract_metadata: MetadataFn | None) -> IngestResult:
         if self._docstore.exists(doc.document_id) and self._store.has_document(doc.document_id):
             return IngestResult(doc.document_id, 0, True)
 
@@ -67,6 +70,7 @@ class Indexer:
             "date": None,
             "parties": [],
             "jurisdiction": None,
+            **(extract_metadata(doc) if extract_metadata else {}),
             **(metadata or {}),
         }
         if self._contextualizer:

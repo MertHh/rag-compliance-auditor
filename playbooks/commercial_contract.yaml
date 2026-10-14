@@ -1,0 +1,32 @@
+name: Commercial contract
+rules:
+  - id: liability_cap
+    title: Limitation of liability
+    type: must_exist
+    severity: high
+    queries: ["limitation of liability", "liability cap aggregate amount"]
+    criteria: "Total liability of a party is limited to a stated amount or a formula, such as fees paid in a period."
+  - id: termination_notice
+    title: Termination notice period
+    type: condition
+    severity: medium
+    queries: ["termination notice period", "terminate this agreement upon written notice"]
+    criteria: "If a party may terminate for convenience, it must give at least 30 days written notice."
+  - id: governing_law
+    title: Governing law
+    type: must_exist
+    severity: low
+    queries: ["governing law", "governed by the laws of"]
+    criteria: "The contract names the law or jurisdiction that governs it."
+  - id: confidentiality
+    title: Confidentiality
+    type: must_exist
+    severity: medium
+    queries: ["confidential information", "non-disclosure obligations"]
+    criteria: "Each party must keep the other party's confidential information secret and use it only for the contract."
+  - id: unlimited_liability
+    title: Unlimited liability
+    type: must_not_exist
+    severity: high
+    queries: ["unlimited liability", "liability shall not be limited"]
+    criteria: "A party's liability is unlimited or expressly excluded from any cap for all claims."
