@@ -1,9 +1,15 @@
 from dataclasses import dataclass
+from typing import Callable
 
+from auditor.audit.nodes import AuditConfig
+from auditor.audit.runner import Auditor
 from auditor.config import Settings
 from auditor.index.qdrant_store import QdrantStore
 from auditor.ingestion.indexer import Indexer
+from auditor.llm.base import LLMProvider
+from auditor.llm.factory import cached_provider_factory
 from auditor.retrieval.pipeline import Retriever
+from auditor.storage.db import AuditStore
 from auditor.storage.docstore import DocumentStore
 
 
@@ -13,6 +19,10 @@ class Services:
     retriever: Retriever
     docstore: DocumentStore
     store: QdrantStore
+    audits: AuditStore
+    auditor: Auditor
+    provider: Callable[[str], LLMProvider]
+    default_provider: str = "openai"
 
 
 def build_services(settings: Settings) -> Services:
@@ -33,9 +43,18 @@ def build_services(settings: Settings) -> Services:
     embedder = BgeM3Embedder(settings.embed_model, settings.device)
     sparse = Bm25SparseEncoder()
     reranker = BgeReranker(settings.rerank_model, settings.device)
+    retriever = Retriever(store, embedder, sparse, reranker, docstore)
+    audits = AuditStore(settings.db_path)
+    provider = cached_provider_factory(settings)
+    auditor = Auditor(retriever, docstore, audits, settings.playbooks_dir, provider,
+                      AuditConfig(concurrency=settings.audit_concurrency))
     return Services(
         indexer=Indexer(store, embedder, sparse, docstore),
-        retriever=Retriever(store, embedder, sparse, reranker, docstore),
+        retriever=retriever,
         docstore=docstore,
         store=store,
+        audits=audits,
+        auditor=auditor,
+        provider=provider,
+        default_provider=settings.provider,
     )

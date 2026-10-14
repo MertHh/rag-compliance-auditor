@@ -127,6 +127,8 @@ def by_rule(responses: dict):
 def audit_llm(**overrides) -> FakeLLM:
     """Responses for the test playbook in conftest: liability found, confidentiality missing."""
     from auditor.audit.prompts import Evaluation, Relevance, RewrittenQueries
+    from auditor.ingestion.metadata import DocumentMetadata
+    from auditor.qa.answer import QAOutput
 
     handlers = {
         "Evaluation": by_rule({
@@ -138,6 +140,10 @@ def audit_llm(**overrides) -> FakeLLM:
         }),
         "Relevance": Relevance(relevant=False),
         "RewrittenQueries": RewrittenQueries(queries=["secret information"]),
+        "QAOutput": QAOutput(answer="Liability is capped at the fees paid in twelve months.",
+                             quotes=[LIABILITY_LINE]),
+        "DocumentMetadata": DocumentMetadata(doc_type="Services Agreement", date="2024-03-01",
+                                             parties=["Acme Corp"], jurisdiction=None),
     }
     handlers.update(overrides)
     return FakeLLM(handlers)
