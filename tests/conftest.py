@@ -73,3 +73,34 @@ def playbooks_dir(tmp_path):
     directory.mkdir()
     (directory / "test_pb.yaml").write_text(TEST_PLAYBOOK, encoding="utf-8")
     return directory
+
+
+@pytest.fixture
+def api_llm():
+    from fakes import audit_llm
+
+    return audit_llm()
+
+
+@pytest.fixture
+def api_services(tmp_path, playbooks_dir, api_llm):
+    from fakes import fake_services
+
+    return fake_services(tmp_path, playbooks_dir, api_llm)
+
+
+@pytest.fixture
+def api(api_services):
+    from fastapi.testclient import TestClient
+
+    from auditor.api.main import create_app
+
+    with TestClient(create_app(api_services)) as client:
+        yield client
+
+
+@pytest.fixture
+def contract_pdf(tmp_path):
+    from fakes import CONTRACT_PAGES
+
+    return _make_pdf(tmp_path / "contract.pdf", CONTRACT_PAGES)

@@ -18,6 +18,12 @@ dependencies = [
     "pydantic>=2.7",
     "pyyaml>=6.0",
     "python-dotenv>=1.0",
+    "fastapi>=0.140",
+    "uvicorn>=0.50",
+    "python-multipart>=0.0.30",
+    "httpx>=0.28",
+    "streamlit>=1.60",
+    "streamlit-pdf-viewer>=0.0.30,<0.2",
 ]
 
 [project.optional-dependencies]
@@ -28,6 +34,7 @@ packages = ["src/auditor"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["ui"]
 markers = ["slow: downloads and runs real models"]
 addopts = "-m 'not slow'"
 filterwarnings = [
