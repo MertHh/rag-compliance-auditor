@@ -7,6 +7,7 @@ ENV_NAMES = (
     "AUDITOR_DEVICE", "AUDITOR_PROVIDER", "OPENAI_EVAL_MODEL", "OPENAI_SMALL_MODEL",
     "OPENAI_PRICES", "OLLAMA_HOST", "OLLAMA_MODEL", "OLLAMA_NUM_CTX", "AUDITOR_PLAYBOOKS",
     "AUDIT_CONCURRENCY", "AUDITOR_BENCHMARKS", "AUDITOR_CONTEXT_PREFIX",
+    "RERANK_DEVICE", "OLLAMA_THINK",
 )
 
 
@@ -32,6 +33,17 @@ def test_defaults(monkeypatch):
     assert s.benchmarks_dir == Path("benchmarks/results")
     assert s.db_path == Path("data") / "auditor.db"
     assert s.context_prefix is False
+    assert s.rerank_device is None
+    assert s.ollama_think is None
+
+
+def test_ollama_think_and_rerank_device(monkeypatch):
+    monkeypatch.setenv("OLLAMA_THINK", "0")
+    monkeypatch.setenv("RERANK_DEVICE", "cpu")
+    s = Settings.from_env()
+    assert s.ollama_think is False and s.rerank_device == "cpu"
+    monkeypatch.setenv("OLLAMA_THINK", "true")
+    assert Settings.from_env().ollama_think is True
 
 
 def test_context_prefix_flag(monkeypatch):

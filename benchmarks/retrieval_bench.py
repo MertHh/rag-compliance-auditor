@@ -67,11 +67,11 @@ class Stack:
 
 
 @cache
-def _models(embed_model: str, rerank_model: str, device: str | None):
+def _models(embed_model: str, rerank_model: str, device: str | None, rerank_device: str | None):
     from auditor.index.embedder import BgeM3Embedder, Bm25SparseEncoder
     from auditor.retrieval.reranker import BgeReranker
 
-    return BgeM3Embedder(embed_model, device), Bm25SparseEncoder(), BgeReranker(rerank_model, device)
+    return BgeM3Embedder(embed_model, device), Bm25SparseEncoder(), BgeReranker(rerank_model, rerank_device)
 
 
 def _qdrant_store(settings: Settings, variant: str, directory: Path) -> QdrantStore:
@@ -83,7 +83,8 @@ def _qdrant_store(settings: Settings, variant: str, directory: Path) -> QdrantSt
 
 
 def real_stack(settings: Settings, variant: str, directory: Path, contextualizer=None) -> Stack:
-    embedder, sparse, reranker = _models(settings.embed_model, settings.rerank_model, settings.device)
+    embedder, sparse, reranker = _models(settings.embed_model, settings.rerank_model, settings.device,
+                                         settings.rerank_device or settings.device)
     directory.mkdir(parents=True, exist_ok=True)
     store = _qdrant_store(settings, variant, directory)
     docstore = DocumentStore(directory / "documents")

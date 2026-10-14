@@ -11,16 +11,19 @@ _CALL_ERRORS = (ConnectionError, httpx.HTTPError, ollama.ResponseError)
 class OllamaProvider:
     name = "ollama"
 
-    def __init__(self, client, model: str, host: str, num_ctx: int = 16384):
+    def __init__(self, client, model: str, host: str, num_ctx: int = 16384,
+                 think: bool | None = None):
         self._client = client
         self._model = model
         self._host = host
         self._num_ctx = num_ctx
+        self._think = think
 
     @classmethod
     def from_settings(cls, settings: Settings) -> "OllamaProvider":
         client = ollama.Client(host=settings.ollama_host, timeout=600)
-        return cls(client, settings.ollama_model, settings.ollama_host, settings.ollama_num_ctx)
+        return cls(client, settings.ollama_model, settings.ollama_host, settings.ollama_num_ctx,
+                   settings.ollama_think)
 
     def model_for(self, tier: Tier) -> str:
         return self._model
@@ -38,6 +41,7 @@ class OllamaProvider:
 
     def complete(self, system: str, user: str, schema: type[T], tier: Tier) -> LLMResult[T]:
         try:
+            extra = {} if self._think is None else {"think": self._think}
             response = self._client.chat(
                 model=self._model,
                 messages=[
@@ -46,6 +50,7 @@ class OllamaProvider:
                 ],
                 format=schema.model_json_schema(),
                 options={"temperature": 0, "num_ctx": self._num_ctx},
+                **extra,
             )
             value = schema.model_validate_json(response.message.content or "")
         except (*_CALL_ERRORS, ValidationError) as exc:

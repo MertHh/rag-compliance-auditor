@@ -12,6 +12,11 @@ def _flag(name: str) -> bool:
     return os.environ.get(name, "").strip().lower() in ("1", "true", "yes", "on")
 
 
+def _optional_flag(name: str) -> bool | None:
+    raw = os.environ.get(name, "").strip()
+    return _flag(name) if raw else None
+
+
 @dataclass(frozen=True)
 class Settings:
     data_dir: Path
@@ -31,6 +36,8 @@ class Settings:
     audit_concurrency: int
     benchmarks_dir: Path
     context_prefix: bool
+    rerank_device: str | None
+    ollama_think: bool | None
 
     @property
     def db_path(self) -> Path:
@@ -56,4 +63,6 @@ class Settings:
             audit_concurrency=_int("AUDIT_CONCURRENCY", 4),
             benchmarks_dir=Path(os.environ.get("AUDITOR_BENCHMARKS", "benchmarks/results")),
             context_prefix=_flag("AUDITOR_CONTEXT_PREFIX"),
+            rerank_device=os.environ.get("RERANK_DEVICE") or None,
+            ollama_think=_optional_flag("OLLAMA_THINK"),
         )

@@ -54,7 +54,8 @@ def build_services(settings: Settings) -> Services:
     # Models load on first use, so a cached audit or a document listing starts at once.
     embedder = Lazy(lambda: embedders.BgeM3Embedder(settings.embed_model, settings.device))
     sparse = Lazy(lambda: embedders.Bm25SparseEncoder())
-    reranker = Lazy(lambda: rerankers.BgeReranker(settings.rerank_model, settings.device))
+    reranker = Lazy(lambda: rerankers.BgeReranker(settings.rerank_model,
+                                                  settings.rerank_device or settings.device))
     lock = threading.Lock()
     retriever = Retriever(store, embedder, sparse, reranker, docstore, lock)
     audits = AuditStore(settings.db_path)

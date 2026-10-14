@@ -105,3 +105,12 @@ def test_factory_reports_missing_openai_key(monkeypatch):
 def test_cached_factory_builds_each_provider_once():
     get = cached_provider_factory(Settings.from_env())
     assert get("ollama") is get("ollama")
+
+
+def test_think_is_sent_only_when_set():
+    provider, client = _provider()
+    provider.complete("s", "u", Verdict, "eval")
+    assert "think" not in client.kwargs
+    client = FakeOllamaClient()
+    OllamaProvider(client, "qwen3:8b", "http://h", think=False).complete("s", "u", Verdict, "eval")
+    assert client.kwargs["think"] is False
