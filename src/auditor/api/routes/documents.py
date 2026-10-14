@@ -23,7 +23,10 @@ def safe_filename(name: str | None) -> str:
     """Keeps only the last path component and replaces characters Windows rejects."""
     base = re.split(r"[\\/]", name or "")[-1]
     cleaned = _UNSAFE_CHARS.sub("_", base).strip(" .")
-    return cleaned or "upload.pdf"
+    if not cleaned:
+        return "upload.pdf"
+    path = Path(cleaned)
+    return path.stem[:150] + path.suffix[:4] if len(cleaned) > 154 else cleaned
 
 
 def summary(services: Services, document_id: str) -> dict:

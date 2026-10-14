@@ -103,3 +103,12 @@ def test_safe_filename():
     assert safe_filename("") == "upload.pdf"
     assert safe_filename(None) == "upload.pdf"
     assert safe_filename("...") == "upload.pdf"
+    long = safe_filename("x" * 300 + ".pdf")
+    assert len(long) <= 154 and long.endswith(".pdf")
+
+
+def test_very_long_filename_is_accepted(api, contract_pdf):
+    with open(contract_pdf, "rb") as fh:
+        response = api.post("/documents", files={"file": ("x" * 300 + ".pdf", fh, "application/pdf")})
+    assert response.status_code == 200
+    assert len(response.json()["document"]["filename"]) <= 154
