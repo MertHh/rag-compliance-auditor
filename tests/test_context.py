@@ -4,7 +4,7 @@ from auditor.ingestion.chunker import build_chunks
 from auditor.ingestion.context import ContextLine, LLMContextualizer
 from auditor.ingestion.parser import parse_text
 from auditor.ingestion.structure import detect_sections
-from auditor.llm.base import LLMError
+from auditor.llm.base import LLMError, ProviderUnavailableError
 
 SENTENCE = " A services agreement between Acme Corp and Beta LLC; this passage caps liability. "
 
@@ -35,3 +35,13 @@ def test_failure_gives_empty_prefix(sample_contract):
     assert contextualizer(doc, chunk) == ""
     assert contextualizer.failures == 1
     assert contextualizer.usage.input_tokens == 0
+
+
+def test_unavailable_provider_gives_empty_prefix(sample_contract):
+    def factory():
+        raise ProviderUnavailableError("OPENAI_API_KEY is not set")
+
+    contextualizer = LLMContextualizer(factory)
+    doc, chunk = _doc_and_chunk(sample_contract)
+    assert contextualizer(doc, chunk) == ""
+    assert contextualizer.failures == 1

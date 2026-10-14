@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from auditor.ingestion.chunker import Chunk
 from auditor.ingestion.metadata import first_pages_text
 from auditor.ingestion.parser import ParsedDocument
-from auditor.llm.base import LLMError, LLMProvider, Usage, complete_with_retry
+from auditor.llm.base import LLMError, LLMProvider, ProviderUnavailableError, Usage, complete_with_retry
 
 log = logging.getLogger(__name__)
 
@@ -40,7 +40,7 @@ class LLMContextualizer:
         try:
             result = complete_with_retry(self._provider_factory(), CONTEXT_SYSTEM, prompt,
                                          ContextLine, "small")
-        except LLMError as exc:
+        except (LLMError, ProviderUnavailableError) as exc:
             log.warning("context prefix failed for %s: %s", doc.filename, exc)
             with self._lock:
                 self.failures += 1
