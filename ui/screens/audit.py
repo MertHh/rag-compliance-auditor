@@ -46,6 +46,8 @@ if st.button("Run audit", type="primary", key="run_audit", disabled=not by_name[
     try:
         state, payload = client.start_audit(doc["document_id"], playbook_key, provider, force)
     except ApiError as exc:
+        st.session_state.pop("audit_id", None)
+        st.session_state.pop("audit_saved", None)
         st.error(exc.detail)
     else:
         st.session_state["audit_id"] = payload["audit_id"]
@@ -80,9 +82,8 @@ if not audit_id:
 def _wait_for(audit_id: str) -> None:
     try:
         state, _ = client.audit(audit_id)
-    except ApiError as exc:
-        st.error(exc.detail)
-        return
+    except ApiError:
+        st.rerun()  # the full run shows the error and stops without polling again
     if state == "done":
         st.rerun()
     st.info("Audit running… findings appear when every rule is done.")
@@ -91,13 +92,15 @@ def _wait_for(audit_id: str) -> None:
 try:
     state, report = client.audit(audit_id)
 except ApiError as exc:
+    if exc.status == 404:  # the job is gone, e.g. after an API restart
+        st.session_state.pop("audit_id", None)
     st.error(exc.detail)
+    st.stop()
+if report.get("document_id") != doc["document_id"]:
+    st.session_state.pop("audit_id", None)
     st.stop()
 if state == "running":
     _wait_for(audit_id)
-    st.stop()
-if report["document_id"] != doc["document_id"]:
-    st.session_state.pop("audit_id", None)
     st.stop()
 
 risk_col, rules_col, time_col, cost_col = st.columns(4)

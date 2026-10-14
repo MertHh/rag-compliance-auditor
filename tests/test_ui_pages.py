@@ -179,3 +179,41 @@ def test_benchmarks_empty(fake):
     fake.benchmarks = lambda: []
     at = run_screen("benchmarks")
     assert any("No benchmark results yet" in text for text in texts(at.info))
+
+
+def test_failed_start_hides_previous_report(fake):
+    at = run_screen("audit", audit_id=AUDIT_ID, audit_saved=True)
+    assert len(at.metric) > 0
+
+    def failing_start(document_id, playbook, provider=None, force=False):
+        raise ApiError(503, "OpenAI is not reachable")
+
+    fake.start_audit = failing_start
+    at.button(key="run_audit").click().run()
+    assert not at.exception
+    assert "OpenAI is not reachable" in texts(at.error)
+    assert len(at.metric) == 0
+    assert not any(text.startswith("Saved run") for text in texts(at.caption))
+
+
+def test_running_audit_for_another_document_is_not_shown(fake):
+    fake.audit_state = "running"
+    at = run_screen("audit", audit_id=AUDIT_ID, document_id=DOC_ID)
+    assert any("Audit running" in text for text in texts(at.info))
+    fake.docs = [{**fake.docs[0], "document_id": "ef" * 32}]
+    at.run()
+    assert not at.exception
+    assert not any("Audit running" in text for text in texts(at.info))
+    assert "audit_id" not in at.session_state
+
+
+def test_lost_audit_shows_error_without_polling(fake):
+    def missing_audit(audit_id):
+        raise ApiError(404, "audit x not found")
+
+    fake.audit = missing_audit
+    at = run_screen("audit", audit_id=AUDIT_ID)
+    assert not at.exception
+    assert "audit x not found" in texts(at.error)
+    assert not any("Audit running" in text for text in texts(at.info))
+    assert "audit_id" not in at.session_state

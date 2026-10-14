@@ -110,7 +110,7 @@ class FakeApi:
 
     def audit(self, audit_id):
         if self.audit_state == "running":
-            result = ("running", {"audit_id": audit_id, "status": "running",
+            result = ("running", {"audit_id": audit_id, "document_id": DOC_ID, "status": "running",
                                   "started_at": "2026-10-14T09:30:00+00:00"})
         else:
             result = ("done", REPORT)
