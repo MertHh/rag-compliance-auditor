@@ -117,3 +117,24 @@ def test_failed_docstore_save_leaves_no_vectors_behind(parts, sample_contract, m
     with pytest.raises(OSError):
         _indexer(parts).ingest_text(sample_contract, "msa.txt")
     assert store.has_document(parse_text(sample_contract, "msa.txt").document_id) is False
+
+
+def test_is_indexed(parts, sample_contract):
+    from auditor.ingestion.parser import parse_text
+
+    indexer = _indexer(parts)
+    document_id = parse_text(sample_contract, "c.txt").document_id
+    assert indexer.is_indexed(document_id) is False
+    indexer.ingest_text(sample_contract, "c.txt")
+    assert indexer.is_indexed(document_id) is True
+
+
+def test_user_metadata_none_does_not_erase_extracted_fields(parts, sample_contract):
+    _, docstore, _ = parts
+    result = _indexer(parts).ingest_text(
+        sample_contract, "c.txt", {"doc_type": None, "jurisdiction": "Delaware"},
+        extract_metadata=lambda doc: {"doc_type": "Services Agreement", "jurisdiction": "New York"},
+    )
+    meta = docstore.metadata(result.document_id)
+    assert meta["doc_type"] == "Services Agreement"
+    assert meta["jurisdiction"] == "Delaware"

@@ -1,5 +1,4 @@
 import hashlib
-import threading
 import time
 import uuid
 from pathlib import Path
@@ -33,8 +32,6 @@ class Auditor:
         self._playbooks_dir = Path(playbooks_dir)
         self._providers = provider_factory
         self._config = config
-        # Retrieval touches the vector store and GPU models, which are not thread-safe.
-        self._lock = threading.Lock()
 
     def run(self, document_id: str, playbook_key: str, provider_name: str, *,
             force: bool = False) -> dict:
@@ -52,7 +49,7 @@ class Auditor:
 
         recorder = TraceRecorder()
         nodes = RuleNodes(self._retriever, self._docstore, provider, recorder, document_id,
-                          self._config, self._lock)
+                          self._config)
         graph = build_rule_graph(nodes, self._config.max_rewrites)
         rules = loaded.playbook.rules
         started = time.perf_counter()
