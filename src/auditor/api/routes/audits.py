@@ -1,10 +1,12 @@
-from typing import Literal
+import json
+from typing import Annotated, Literal
 
-from fastapi import APIRouter, HTTPException, Response
+from fastapi import APIRouter, HTTPException, Query, Response
 from pydantic import BaseModel, Field
 
 from auditor.api.routes.deps import JobsDep, ServicesDep
 from auditor.api.schemas import ProviderName
+from auditor.audit.export import report_pdf
 from auditor.storage.db import AuditNotFound
 
 router = APIRouter(prefix="/audits", tags=["audits"])
@@ -69,3 +71,17 @@ def get_trace(audit_id: str, services: ServicesDep, jobs: JobsDep) -> list[dict]
 def review_finding(audit_id: str, rule_id: str, body: ReviewRequest,
                    services: ServicesDep) -> dict:
     return services.audits.set_review(audit_id, rule_id, body.decision, body.note)
+
+
+@router.get("/{audit_id}/export")
+def export_audit(audit_id: str, services: ServicesDep,
+                 fmt: Annotated[Literal["json", "pdf"], Query(alias="format")] = "json") -> Response:
+    report = services.audits.get_report(audit_id)
+    if report is None:
+        raise AuditNotFound(audit_id)
+    headers = {"Content-Disposition": f'attachment; filename="audit-{audit_id}.{fmt}"'}
+    if fmt == "json":
+        body = json.dumps(report, ensure_ascii=False, indent=2).encode("utf-8")
+        return Response(body, media_type="application/json", headers=headers)
+    pdf = report_pdf(report, services.docstore.pdf_path(report["document_id"]))
+    return Response(pdf, media_type="application/pdf", headers=headers)
