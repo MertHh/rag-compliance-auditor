@@ -69,6 +69,11 @@ class Auditor:
         report = self._audits.find_cached(prepared.cache_key)
         return None if report is None else {**report, "cached": True}
 
+    def latest(self, prepared: PreparedAudit) -> dict | None:
+        """Newest stored report for this audit, even one with rule errors (used by the benchmark)."""
+        report = self._audits.find_latest(prepared.cache_key)
+        return None if report is None else {**report, "cached": True}
+
     def execute(self, prepared: PreparedAudit, audit_id: str | None = None) -> dict:
         recorder = TraceRecorder()
         nodes = RuleNodes(self._retriever, self._docstore, prepared.provider, recorder,

@@ -72,6 +72,14 @@ def test_find_cached_returns_newest_clean_run(db):
     assert db.find_cached("other") is None
 
 
+def test_find_latest_includes_errored_runs(db):
+    db.save_audit(_report("clean", created_at="2026-10-14T09:00:00+00:00"), [], "key1")
+    db.save_audit(_report("broken", errors=[{"rule_id": "r1", "message": "x"}],
+                          created_at="2026-10-14T11:00:00+00:00"), [], "key1")
+    assert db.find_latest("key1")["audit_id"] == "broken"
+    assert db.find_latest("other") is None
+
+
 def test_cached_report_carries_reviews(db):
     db.save_audit(_report(), [], "key1")
     db.set_review("a1", "r1", "accepted")

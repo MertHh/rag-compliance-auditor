@@ -127,3 +127,38 @@ def test_mapping_covers_the_shipped_playbook():
     ids = {rule.id for rule in rules}
     assert set(bench.CUAD_CATEGORY_BY_RULE) == ids - {"confidentiality"}
     assert set(bench.CUAD_CATEGORY_BY_RULE.values()) <= set(CUAD_CATEGORIES)
+
+
+def test_openai_without_prices_is_refused_before_any_audit(setup, monkeypatch, capsys):
+    monkeypatch.setenv("OPENAI_PRICES", "")
+    llm = PricedLLM(0.01)
+    llm.name = "openai"
+    assert _run(setup, llm) == 1
+    assert "no price for fake-eval, fake-small in OPENAI_PRICES" in capsys.readouterr().out
+    assert AuditStore(setup["data"] / "audits.db").list_audits() == []
+
+
+def test_empty_subset_is_an_error(setup, capsys):
+    save_subset(setup["subset"], [])
+    assert _run(setup, PricedLLM(0.0)) == 1
+    assert "no contracts to audit" in capsys.readouterr().out
+
+
+def test_negative_contract_count_is_rejected(setup):
+    with pytest.raises(SystemExit):
+        _run(setup, PricedLLM(0.0), "--contracts", "-1")
+
+
+def test_resume_does_not_rerun_audits_with_errors(setup):
+    class Flaky(PricedLLM):
+        def complete(self, system, user, schema, tier):
+            if schema.__name__ == "Evaluation" and "Rule: Governing law\n" in user:
+                raise RuntimeError("boom")
+            return super().complete(system, user, schema, tier)
+
+    assert _run(setup, Flaky(0.0)) == 0
+    _, data = _row(setup)
+    assert data["rows"][0]["errors"] == 3
+    assert len(AuditStore(setup["data"] / "audits.db").list_audits()) == 3
+    assert _run(setup, Flaky(0.0)) == 0
+    assert len(AuditStore(setup["data"] / "audits.db").list_audits()) == 3

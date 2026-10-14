@@ -4,7 +4,7 @@ compare clause presence with the lawyers' marks, and record time and cost per au
 Free (local):  python -m benchmarks.audit_bench --provider ollama --ollama-model qwen3:8b
 Paid (OpenAI): python -m benchmarks.audit_bench --provider openai --eval-model gpt-5.4-mini \
                    --small-model gpt-5.4-mini --max-cost 3
-Audits are cached in --data-dir/audits.db, so a stopped or interrupted run resumes for free.
+Audits are cached in --data-dir/audits.db (errored ones too), so a stopped or interrupted run resumes for free.
 """
 
 import argparse
@@ -25,6 +25,7 @@ from auditor.config import Settings
 from auditor.ingestion.indexer import Indexer
 from auditor.llm.base import ProviderUnavailableError, models_label
 from auditor.llm.factory import PROVIDERS, cached_provider_factory
+from auditor.llm.openai_provider import parse_prices
 from auditor.storage.db import AuditStore
 from benchmarks.retrieval_bench import index_contracts, real_stack, write_result
 
@@ -140,12 +141,19 @@ def _provider_settings(settings: Settings, args: argparse.Namespace) -> Settings
     return replace(settings, ollama_model=args.ollama_model or settings.ollama_model)
 
 
+def _non_negative(text: str) -> int:
+    value = int(text)
+    if value < 0:
+        raise argparse.ArgumentTypeError("must be 0 or more")
+    return value
+
+
 def main(argv: list[str] | None = None, stack_factory=None, provider_factory=None,
          mapping: dict[str, str] = CUAD_CATEGORY_BY_RULE) -> int:
     parser = argparse.ArgumentParser(prog="audit_bench")
     parser.add_argument("--cuad", default="data/cuad/CUAD_v1.json")
     parser.add_argument("--subset", default=str(SUBSET_FILE))
-    parser.add_argument("--contracts", type=int, default=0, help="first N subset contracts only")
+    parser.add_argument("--contracts", type=_non_negative, default=0, help="first N subset contracts only")
     parser.add_argument("--provider", choices=PROVIDERS, required=True)
     parser.add_argument("--eval-model")
     parser.add_argument("--small-model")
@@ -167,6 +175,9 @@ def main(argv: list[str] | None = None, stack_factory=None, provider_factory=Non
     contracts = [contracts_by_title[title] for title in load_subset(args.subset)]
     if args.contracts:
         contracts = contracts[:args.contracts]
+    if not contracts:
+        print("error: no contracts to audit")
+        return 1
     ids = index_contracts(contracts, stack.indexer)
 
     tally, budget, done, stopped, models, rules = AuditTally(), Budget(args.max_cost), 0, None, "-", 0
@@ -177,8 +188,14 @@ def main(argv: list[str] | None = None, stack_factory=None, provider_factory=Non
             print(f"error: {exc}")
             return 1
         models = models_label(prepared.provider)
+        if n == 0 and prepared.provider.name == "openai":
+            used = {prepared.provider.model_for("eval"), prepared.provider.model_for("small")}
+            missing = sorted(used - set(parse_prices(settings.openai_prices)))
+            if missing:
+                print(f"error: no price for {', '.join(missing)} in OPENAI_PRICES; the budget cap would not work")
+                return 1
         rules = sum(1 for rule in prepared.playbook.playbook.rules if rule.id in mapping)
-        report = stack.auditor.cached(prepared)
+        report = stack.auditor.cached(prepared) or stack.auditor.latest(prepared)
         if report is None:
             try:
                 budget.check(remaining=len(contracts) - n)
@@ -195,7 +212,8 @@ def main(argv: list[str] | None = None, stack_factory=None, provider_factory=Non
     provider_name = prepared.provider.name
     slug = re.sub(r"[^a-z0-9]+", "-", f"{provider_name}-{models}".lower()).strip("-")
     notes = (f"{done} of {len(contracts)} subset contracts; positive class: clause missing; "
-             f"citation accuracy counts quotes overlapping a marked span.")
+             f"citation accuracy counts quotes overlapping a marked span; "
+             f"undecided % includes errors.")
     if stopped:
         notes += f" stopped by budget: {stopped}"
         print(f"stopped by budget: {stopped}")

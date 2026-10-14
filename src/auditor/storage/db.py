@@ -100,6 +100,15 @@ class AuditStore:
             ).fetchone()
             return self._with_reviews(conn, json.loads(row["report"])) if row else None
 
+    def find_latest(self, cache_key: str) -> dict | None:
+        """Newest report for the key, even one with rule errors (find_cached skips those)."""
+        with self._db() as conn:
+            row = conn.execute(
+                "SELECT report FROM audits WHERE cache_key = ? ORDER BY created_at DESC, rowid DESC LIMIT 1",
+                (cache_key,),
+            ).fetchone()
+            return self._with_reviews(conn, json.loads(row["report"])) if row else None
+
     def get_trace(self, audit_id: str) -> list[dict] | None:
         with self._db() as conn:
             row = conn.execute("SELECT trace FROM audits WHERE audit_id = ?", (audit_id,)).fetchone()
