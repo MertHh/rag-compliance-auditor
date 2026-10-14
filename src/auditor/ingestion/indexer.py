@@ -38,6 +38,7 @@ class Indexer:
         max_child_tokens: int = 400,
         max_parent_tokens: int = 2000,
         contextualizer: Contextualizer | None = None,
+        chunker: Callable[[ParsedDocument], list[Chunk]] | None = None,
         lock: threading.Lock | None = None,
     ):
         self._store = store
@@ -47,6 +48,7 @@ class Indexer:
         self._max_child_tokens = max_child_tokens
         self._max_parent_tokens = max_parent_tokens
         self._contextualizer = contextualizer
+        self._chunker = chunker
         self._lock = lock or threading.Lock()
 
     def ingest_pdf(self, path: str | Path, metadata: dict | None = None, *,
@@ -67,9 +69,12 @@ class Indexer:
         if self.is_indexed(doc.document_id):
             return IngestResult(doc.document_id, 0, True)
 
-        chunks = build_chunks(
-            doc, detect_sections(doc.lines), self._max_child_tokens, self._max_parent_tokens
-        )
+        if self._chunker is not None:
+            chunks = self._chunker(doc)
+        else:
+            chunks = build_chunks(
+                doc, detect_sections(doc.lines), self._max_child_tokens, self._max_parent_tokens
+            )
         if not chunks:
             raise EmptyDocumentError(f"{doc.filename}: document has no text to index")
 
