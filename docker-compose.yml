@@ -1,0 +1,61 @@
+services:
+  qdrant:
+    image: qdrant/qdrant:v1.19.1
+    volumes:
+      - qdrant-data:/qdrant/storage
+    restart: unless-stopped
+
+  api:
+    build: .
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      QDRANT_URL: http://qdrant:6333
+      OLLAMA_HOST: ${OLLAMA_HOST:-http://ollama:11434}
+      AUDITOR_DATA_DIR: /data
+      AUDITOR_PLAYBOOKS: /app/playbooks
+      AUDITOR_BENCHMARKS: /app/benchmarks/results
+    volumes:
+      - auditor-data:/data
+      - models:/models
+      - ./playbooks:/app/playbooks:ro
+      - ./benchmarks/results:/app/benchmarks/results:ro
+    ports:
+      - "8000:8000"
+    depends_on:
+      - qdrant
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+  ui:
+    build: .
+    command: ["streamlit", "run", "ui/app.py", "--server.address", "0.0.0.0",
+              "--server.port", "8501", "--server.headless", "true"]
+    environment:
+      AUDITOR_API_URL: http://api:8000
+    ports:
+      - "8501:8501"
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+  ollama:
+    image: ollama/ollama:0.40.3
+    profiles: ["local"]
+    volumes:
+      - ollama:/root/.ollama
+    ports:
+      - "11434:11434"
+    restart: unless-stopped
+
+volumes:
+  auditor-data:
+  models:
+  qdrant-data:
+  ollama:
