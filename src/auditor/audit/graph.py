@@ -21,8 +21,7 @@ def after_evaluate(state: RuleState) -> str:
 def after_verify(state: RuleState) -> str:
     if state["needs_retry"]:
         return "evaluate"
-    if (is_absence_verdict(state["rule"].type, state["status"])
-            and not state["evaluation"].clause_found and not state["wide_scan_done"]):
+    if is_absence_verdict(state["rule"].type, state["status"]) and not state["wide_scan_done"]:
         return "wide_scan"
     return END
 

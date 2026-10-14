@@ -189,6 +189,10 @@ class RuleNodes:
         update: dict = {"wide_scan_done": True,
                         "examined": _add_examined(state["examined"], candidates)}
         if relevant:
-            update.update(passages=relevant[: self._config.max_sections], evaluation=None,
+            cited = [p for p in state["passages"]
+                     if any(p.document_id == c.document_id and p.char_start <= c.char_start < p.char_end
+                            for c in state["citations"])]
+            merged = list({p.parent_id: p for p in cited + relevant}.values())
+            update.update(passages=merged[: self._config.max_sections], evaluation=None,
                           eval_attempts=0, status=None, citations=[])
         return update

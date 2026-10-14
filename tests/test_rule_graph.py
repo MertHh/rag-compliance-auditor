@@ -152,14 +152,26 @@ def test_section_cap_limits_evaluated_passages(env):
     assert len(final["passages"]) == 2
 
 
-def test_prohibited_clause_found_but_not_matching_skips_wide_scan(env):
-    found_ok = Evaluation(clause_found=True, matches_criteria=False, reasoning="Benign.",
-                          quotes=[LIABILITY_QUOTE])
-    llm = FakeLLM({"Evaluation": found_ok})
+BENIGN = Evaluation(clause_found=True, matches_criteria=False, reasoning="Benign.",
+                    quotes=[LIABILITY_QUOTE])
+
+
+def test_prohibited_clause_found_but_not_matching_still_wide_scans(env):
+    llm = FakeLLM({"Evaluation": BENIGN, "Relevance": Relevance(relevant=False)})
     final, nodes = _run(env, _rule("must_not_exist"), llm)
     assert final["status"] is Status.COMPLIANT
     assert len(final["citations"]) == 1
-    assert nodes == ["search", "evaluate", "verify"]
+    assert nodes == ["search", "evaluate", "verify", "wide_scan"]
+
+
+def test_wide_scan_reevaluation_keeps_cited_section(env):
+    relevant = lambda user: Relevance(relevant="aggregate liability" not in user)  # not the cited section
+    llm = FakeLLM({"Evaluation": BENIGN, "Relevance": relevant})
+    final, nodes = _run(env, _rule("must_not_exist"), llm)
+    assert nodes[:4] == ["search", "evaluate", "verify", "wide_scan"]
+    assert llm.count("Evaluation") == 2
+    second_prompt = [user for name, _, user in llm.calls if name == "Evaluation"][1]
+    assert LIABILITY_QUOTE in second_prompt
 
 
 def test_rewrite_failure_sets_error(env):
