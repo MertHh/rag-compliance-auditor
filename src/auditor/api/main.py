@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
-from auditor.api.routes import documents, meta
+from auditor.api.routes import documents, meta, search
 from auditor.audit.playbook import PlaybookError, PlaybookNotFound
 from auditor.config import Settings
 from auditor.index.store import InvalidDateError
@@ -73,4 +73,5 @@ def create_app(services: Services | None = None) -> FastAPI:
         app.add_exception_handler(exc_type, _handle_core_error)
     app.include_router(meta.router)
     app.include_router(documents.router)
+    app.include_router(search.router)
     return app
