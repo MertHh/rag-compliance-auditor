@@ -61,3 +61,13 @@ def test_root_directory_is_created(tmp_path):
     root = tmp_path / "nested" / "docs"
     DocumentStore(root)
     assert root.is_dir()
+
+
+def test_unsafe_ids_are_never_used_as_paths(tmp_path):
+    (tmp_path / "secret.json").write_text('{"document": {}, "metadata": {}}', encoding="utf-8")
+    store = DocumentStore(tmp_path / "docs")
+    for bad in ["..\\secret", "../secret", "a/b", "", "x" * 129, "c:secret"]:
+        assert store.exists(bad) is False
+        assert store.pdf_path(bad) is None
+        with pytest.raises(DocumentNotFound):
+            store.metadata(bad)

@@ -1,4 +1,5 @@
 import json
+import re
 from dataclasses import asdict
 from pathlib import Path
 
@@ -9,6 +10,11 @@ class DocumentNotFound(KeyError):
     pass
 
 
+# Document ids are SHA-256 hex digests; tests use short names. Anything else, such as
+# "..\x" (a path on Windows), is never turned into a file path.
+_SAFE_ID = re.compile(r"^[A-Za-z0-9_-]{1,128}$")
+
+
 class DocumentStore:
     def __init__(self, root: str | Path):
         self._root = Path(root)
@@ -16,6 +22,8 @@ class DocumentStore:
         self._cache: dict[str, ParsedDocument] = {}
 
     def _json_path(self, document_id: str) -> Path:
+        if not _SAFE_ID.match(document_id):
+            raise DocumentNotFound(document_id)
         return self._root / f"{document_id}.json"
 
     def _read(self, document_id: str) -> dict:
@@ -36,7 +44,7 @@ class DocumentStore:
         self._cache[doc.document_id] = doc
 
     def exists(self, document_id: str) -> bool:
-        return self._json_path(document_id).exists()
+        return bool(_SAFE_ID.match(document_id)) and self._json_path(document_id).exists()
 
     def load(self, document_id: str) -> ParsedDocument:
         if document_id in self._cache:
@@ -70,5 +78,7 @@ class DocumentStore:
         return sorted(path.stem for path in self._root.glob("*.json"))
 
     def pdf_path(self, document_id: str) -> Path | None:
+        if not _SAFE_ID.match(document_id):
+            return None
         path = self._root / f"{document_id}.pdf"
         return path if path.exists() else None
