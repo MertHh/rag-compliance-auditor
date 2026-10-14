@@ -2,6 +2,7 @@ from fastapi import APIRouter
 
 from auditor.api.routes.deps import ServicesDep
 from auditor.audit.playbook import PlaybookError, find_playbook, list_playbooks
+from auditor.benchmark_results import load_results
 from auditor.llm.base import ProviderUnavailableError, models_label
 from auditor.llm.factory import PROVIDERS
 
@@ -41,3 +42,8 @@ def providers(services: ServicesDep) -> dict:
         items.append({"name": name, "available": True, "models": models_label(provider),
                       "error": None})
     return {"default": services.default_provider, "providers": items}
+
+
+@router.get("/benchmarks")
+def benchmarks(services: ServicesDep) -> list[dict]:
+    return load_results(services.benchmarks_dir)
