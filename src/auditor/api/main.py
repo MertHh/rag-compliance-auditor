@@ -6,7 +6,8 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
-from auditor.api.routes import documents, meta, search
+from auditor.api.jobs import AuditJobs
+from auditor.api.routes import audits, documents, meta, search
 from auditor.audit.playbook import PlaybookError, PlaybookNotFound
 from auditor.config import Settings
 from auditor.index.store import InvalidDateError
@@ -66,7 +67,9 @@ def create_app(services: Services | None = None) -> FastAPI:
             threading.Thread(target=_warm_up, args=(app.state.services,), daemon=True).start()
         else:
             app.state.services = services
+        app.state.jobs = AuditJobs(app.state.services.auditor)
         yield
+        app.state.jobs.shutdown()
 
     app = FastAPI(title="Compliance Auditor API", lifespan=lifespan)
     for exc_type in STATUS_CODES:
@@ -74,4 +77,5 @@ def create_app(services: Services | None = None) -> FastAPI:
     app.include_router(meta.router)
     app.include_router(documents.router)
     app.include_router(search.router)
+    app.include_router(audits.router)
     return app
