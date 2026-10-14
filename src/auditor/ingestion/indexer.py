@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+import threading
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
@@ -35,6 +38,7 @@ class Indexer:
         max_child_tokens: int = 400,
         max_parent_tokens: int = 2000,
         contextualizer: Contextualizer | None = None,
+        lock: threading.Lock | None = None,
     ):
         self._store = store
         self._embedder = embedder
@@ -43,6 +47,7 @@ class Indexer:
         self._max_child_tokens = max_child_tokens
         self._max_parent_tokens = max_parent_tokens
         self._contextualizer = contextualizer
+        self._lock = lock or threading.Lock()
 
     def ingest_pdf(self, path: str | Path, metadata: dict | None = None, *,
                    extract_metadata: MetadataFn | None = None) -> IngestResult:
@@ -53,9 +58,13 @@ class Indexer:
                     extract_metadata: MetadataFn | None = None) -> IngestResult:
         return self._index(parse_text(text, filename), metadata, None, extract_metadata)
 
+    def is_indexed(self, document_id: str) -> bool:
+        with self._lock:
+            return self._docstore.exists(document_id) and self._store.has_document(document_id)
+
     def _index(self, doc: ParsedDocument, metadata: dict | None, source_pdf: bytes | None,
                extract_metadata: MetadataFn | None) -> IngestResult:
-        if self._docstore.exists(doc.document_id) and self._store.has_document(doc.document_id):
+        if self.is_indexed(doc.document_id):
             return IngestResult(doc.document_id, 0, True)
 
         chunks = build_chunks(
@@ -64,6 +73,8 @@ class Indexer:
         if not chunks:
             raise EmptyDocumentError(f"{doc.filename}: document has no text to index")
 
+        # A field the caller left empty (None) must not erase an extracted value.
+        given = {key: value for key, value in (metadata or {}).items() if value is not None}
         meta = {
             "filename": doc.filename,
             "doc_type": None,
@@ -71,7 +82,7 @@ class Indexer:
             "parties": [],
             "jurisdiction": None,
             **(extract_metadata(doc) if extract_metadata else {}),
-            **(metadata or {}),
+            **given,
         }
         if self._contextualizer:
             for chunk in chunks:
@@ -83,13 +94,15 @@ class Indexer:
 
         # Save the text before the vectors: a search hit must always have a
         # document behind it. A failed upsert is retried by the next ingest.
-        self._docstore.save(doc, meta, source_pdf)
-        self._store.ensure_collection(self._embedder.dim)
-        self._store.delete_document(doc.document_id)
-        self._store.upsert(
-            chunks,
-            self._embedder.embed_documents(texts),
-            self._sparse.encode_documents(texts),
-            meta,
-        )
+        # Metadata extraction (an LLM call) stays outside the lock.
+        with self._lock:
+            self._docstore.save(doc, meta, source_pdf)
+            self._store.ensure_collection(self._embedder.dim)
+            self._store.delete_document(doc.document_id)
+            self._store.upsert(
+                chunks,
+                self._embedder.embed_documents(texts),
+                self._sparse.encode_documents(texts),
+                meta,
+            )
         return IngestResult(doc.document_id, len(chunks), False)

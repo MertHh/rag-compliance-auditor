@@ -147,3 +147,38 @@ def audit_llm(**overrides) -> FakeLLM:
     }
     handlers.update(overrides)
     return FakeLLM(handlers)
+
+
+def fake_services(tmp_path, playbooks_dir, llm, benchmarks_dir=None, provider=None):
+    """Services wired with in-memory Qdrant, fake models and one fake LLM for every provider."""
+    from auditor.audit.runner import Auditor
+    from auditor.index.qdrant_store import QdrantStore
+    from auditor.ingestion.indexer import Indexer
+    from auditor.retrieval.pipeline import Retriever
+    from auditor.services import Services
+    from auditor.storage.db import AuditStore
+    from auditor.storage.docstore import DocumentStore
+
+    store = QdrantStore.in_memory()
+    docstore = DocumentStore(tmp_path / "docs")
+    embedder, sparse = FakeEmbedder(), FakeSparseEncoder()
+    lock = threading.Lock()
+    retriever = Retriever(store, embedder, sparse, FakeReranker(), docstore, lock)
+    audits = AuditStore(tmp_path / "auditor.db")
+
+    if provider is None:
+        def provider(name):
+            return llm
+
+    return Services(
+        indexer=Indexer(store, embedder, sparse, docstore, lock=lock),
+        retriever=retriever,
+        docstore=docstore,
+        store=store,
+        audits=audits,
+        auditor=Auditor(retriever, docstore, audits, playbooks_dir, provider),
+        provider=provider,
+        default_provider="openai",
+        playbooks_dir=playbooks_dir,
+        benchmarks_dir=benchmarks_dir or tmp_path / "benchmarks",
+    )

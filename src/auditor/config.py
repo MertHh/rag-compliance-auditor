@@ -25,6 +25,7 @@ class Settings:
     ollama_num_ctx: int
     playbooks_dir: Path
     audit_concurrency: int
+    benchmarks_dir: Path
 
     @property
     def db_path(self) -> Path:
@@ -48,4 +49,5 @@ class Settings:
             ollama_num_ctx=_int("OLLAMA_NUM_CTX", 16384),
             playbooks_dir=Path(os.environ.get("AUDITOR_PLAYBOOKS", "playbooks")),
             audit_concurrency=_int("AUDIT_CONCURRENCY", 4),
+            benchmarks_dir=Path(os.environ.get("AUDITOR_BENCHMARKS", "benchmarks/results")),
         )

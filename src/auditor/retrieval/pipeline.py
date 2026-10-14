@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+import threading
 from dataclasses import dataclass
 
 from auditor.index.embedder import Embedder, SparseEncoder
@@ -63,16 +66,23 @@ def _positions(hits: list[Hit]) -> dict[str, tuple[int, float]]:
 
 class Retriever:
     def __init__(self, store: VectorStore, embedder: Embedder, sparse_encoder: SparseEncoder,
-                 reranker: Reranker, docstore: DocumentStore):
+                 reranker: Reranker, docstore: DocumentStore, lock: threading.Lock | None = None):
         self._store = store
         self._embedder = embedder
         self._sparse = sparse_encoder
         self._reranker = reranker
         self._docstore = docstore
+        # The local vector store and the GPU models are not thread-safe. The API and the
+        # audit runner search from several threads; the Indexer shares this lock.
+        self._lock = lock or threading.Lock()
 
     def search(self, query: str, config: RetrievalConfig | None = None,
                flt: SearchFilter | None = None) -> RetrievalResult:
-        config = config or RetrievalConfig()
+        with self._lock:
+            return self._search(query, config or RetrievalConfig(), flt)
+
+    def _search(self, query: str, config: RetrievalConfig,
+                flt: SearchFilter | None) -> RetrievalResult:
         if not query.strip():
             return RetrievalResult(query, config, [], [], True)
 

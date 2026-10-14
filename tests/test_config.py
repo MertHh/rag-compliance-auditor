@@ -6,7 +6,7 @@ ENV_NAMES = (
     "AUDITOR_DATA_DIR", "QDRANT_URL", "AUDITOR_COLLECTION", "EMBED_MODEL", "RERANK_MODEL",
     "AUDITOR_DEVICE", "AUDITOR_PROVIDER", "OPENAI_EVAL_MODEL", "OPENAI_SMALL_MODEL",
     "OPENAI_PRICES", "OLLAMA_HOST", "OLLAMA_MODEL", "OLLAMA_NUM_CTX", "AUDITOR_PLAYBOOKS",
-    "AUDIT_CONCURRENCY",
+    "AUDIT_CONCURRENCY", "AUDITOR_BENCHMARKS",
 )
 
 
@@ -29,6 +29,7 @@ def test_defaults(monkeypatch):
     assert s.ollama_num_ctx == 16384
     assert s.playbooks_dir == Path("playbooks")
     assert s.audit_concurrency == 4
+    assert s.benchmarks_dir == Path("benchmarks/results")
     assert s.db_path == Path("data") / "auditor.db"
 
 

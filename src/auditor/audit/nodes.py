@@ -1,4 +1,3 @@
-import threading
 from dataclasses import dataclass, field, replace
 from typing import TypedDict
 
@@ -78,20 +77,17 @@ def _add_examined(examined: list[str], passages: list[ParentPassage]) -> list[st
 
 class RuleNodes:
     def __init__(self, retriever: Retriever, docstore: DocumentStore, provider: LLMProvider,
-                 recorder: TraceRecorder, document_id: str, config: AuditConfig,
-                 lock: threading.Lock):
+                 recorder: TraceRecorder, document_id: str, config: AuditConfig):
         self._retriever = retriever
         self._docstore = docstore
         self._provider = provider
         self._recorder = recorder
         self._document_id = document_id
         self._config = config
-        self._lock = lock
         self._filter = SearchFilter(document_ids=[document_id])
 
     def _search(self, query: str, config: RetrievalConfig) -> RetrievalResult:
-        with self._lock:
-            return self._retriever.search(query, config, self._filter)
+        return self._retriever.search(query, config, self._filter)
 
     def search(self, state: RuleState) -> dict:
         rule, queries = state["rule"], state["queries"]
@@ -155,8 +151,7 @@ class RuleNodes:
                 status = status_for(rule.type, False, False)
                 span.output = f"no clause claimed, status={status}"
                 return {"citations": [], "needs_retry": False, "status": status}
-            with self._lock:
-                doc = self._docstore.load(self._document_id)
+            doc = self._docstore.load(self._document_id)
             citations = verify_quotes(doc, evaluation.quotes, state["passages"])
             if not citations:
                 if state["eval_attempts"] < 2:

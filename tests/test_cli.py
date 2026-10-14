@@ -1,37 +1,11 @@
 import json
 
 import pytest
-from fakes import CONTRACT_PAGES, FakeEmbedder, FakeLLM, FakeReranker, FakeSparseEncoder, audit_llm
+from fakes import CONTRACT_PAGES, FakeLLM, audit_llm, fake_services
 
-from auditor.audit.runner import Auditor
 from auditor.cli import main
-from auditor.index.qdrant_store import QdrantStore
-from auditor.ingestion.indexer import Indexer
-from auditor.retrieval.pipeline import Retriever
-from auditor.services import Services
-from auditor.storage.db import AuditStore
-from auditor.storage.docstore import DocumentStore
 
 PAGES = CONTRACT_PAGES
-
-
-def _services(tmp_path, playbooks_dir, llm):
-    store = QdrantStore.in_memory()
-    docstore = DocumentStore(tmp_path / "docs")
-    embedder, sparse = FakeEmbedder(), FakeSparseEncoder()
-    retriever = Retriever(store, embedder, sparse, FakeReranker(), docstore)
-    audits = AuditStore(tmp_path / "auditor.db")
-    provider = lambda name: llm
-    return Services(
-        indexer=Indexer(store, embedder, sparse, docstore),
-        retriever=retriever,
-        docstore=docstore,
-        store=store,
-        audits=audits,
-        auditor=Auditor(retriever, docstore, audits, playbooks_dir, provider),
-        provider=provider,
-        default_provider="openai",
-    )
 
 
 @pytest.fixture
@@ -41,7 +15,7 @@ def llm():
 
 @pytest.fixture
 def services(tmp_path, playbooks_dir, llm):
-    return _services(tmp_path, playbooks_dir, llm)
+    return fake_services(tmp_path, playbooks_dir, llm)
 
 
 def _ingest(services, make_pdf, tmp_path, capsys) -> str:
@@ -97,7 +71,7 @@ def test_ingest_extracts_metadata(services, make_pdf, tmp_path, capsys):
 
 
 def test_ingest_without_provider_still_indexes(tmp_path, playbooks_dir, make_pdf, capsys):
-    down = _services(tmp_path, playbooks_dir, FakeLLM(unavailable="OPENAI_API_KEY is not set"))
+    down = fake_services(tmp_path, playbooks_dir, FakeLLM(unavailable="OPENAI_API_KEY is not set"))
     assert main(["ingest", str(make_pdf(tmp_path / "c.pdf", PAGES))], down) == 0
     captured = capsys.readouterr()
     assert "metadata extraction skipped: OPENAI_API_KEY is not set" in captured.err

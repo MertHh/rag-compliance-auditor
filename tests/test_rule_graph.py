@@ -1,5 +1,3 @@
-import threading
-
 import pytest
 from fakes import FakeEmbedder, FakeLLM, FakeReranker, FakeSparseEncoder, sequence
 
@@ -41,7 +39,7 @@ def _rule(rule_type="must_exist", queries=("total aggregate liability",)):
 def _run(env, rule, llm, config=AuditConfig()):
     retriever, docstore, doc_id = env
     recorder = TraceRecorder()
-    nodes = RuleNodes(retriever, docstore, llm, recorder, doc_id, config, threading.Lock())
+    nodes = RuleNodes(retriever, docstore, llm, recorder, doc_id, config)
     final = build_rule_graph(nodes, config.max_rewrites).invoke(initial_state(rule))
     return final, [event.node for event in recorder.events()]
 
