@@ -19,6 +19,7 @@ if asked:
     if not question.strip():
         st.warning("Type a question first.")
     else:
+        st.session_state.pop("ask_result", None)
         with st.spinner("Searching and answering…"):
             try:
                 filters = {"document_ids": selected} if selected else None

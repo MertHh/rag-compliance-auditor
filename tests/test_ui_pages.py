@@ -14,6 +14,7 @@ UI = Path(__file__).resolve().parents[1] / "ui"
 def fake(monkeypatch):
     api = FakeApi()
     api.shown = []
+    shared._pdf_bytes.clear()
     monkeypatch.setattr(shared, "get_client", lambda: api)
     monkeypatch.setattr(pdfview, "show_pdf",
                         lambda data, annotations, key: api.shown.append((key, annotations)))
@@ -95,3 +96,20 @@ def test_ask_not_found_shows_message_and_nearest(fake):
     assert not at.exception
     assert texts(at.info) == ["I could not find a statement about this in these documents."]
     assert fake.shown == []
+
+
+def test_ask_error_drops_previous_answer(fake):
+    at = run_screen("ask")
+    at.text_input[0].input("What is the cap?")
+    at.button[0].click().run()
+    assert any("Liability is capped" in text for text in texts(at.markdown))
+
+    def failing_ask(question, filters=None, provider=None):
+        raise ApiError(503, "Ollama is not reachable")
+
+    fake.ask = failing_ask  # only ask fails, so the page still loads the documents
+    at.text_input[0].input("And the term?")
+    at.button[0].click().run()
+    assert not at.exception
+    assert "Ollama is not reachable" in texts(at.error)
+    assert not any("Liability is capped" in text for text in texts(at.markdown))
