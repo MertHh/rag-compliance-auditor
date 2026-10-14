@@ -32,3 +32,18 @@ def test_models_load_on_warm_up_not_on_build(tmp_path, monkeypatch):
         assert len(built) == 3
     finally:
         services.store._client.close()
+
+
+def test_context_prefix_wires_a_contextualizer(tmp_path, monkeypatch):
+    from auditor.ingestion.context import LLMContextualizer
+
+    for module, name in [(embedder_module, "BgeM3Embedder"), (embedder_module, "Bm25SparseEncoder"),
+                         (reranker_module, "BgeReranker")]:
+        monkeypatch.setattr(module, name, type(name, (), {"__init__": lambda self, *a, **k: None}))
+    base = replace(Settings.from_env(), data_dir=tmp_path, qdrant_url=None)
+    off = build_services(replace(base, context_prefix=False))
+    off.store._client.close()
+    on = build_services(replace(base, data_dir=tmp_path / "on", context_prefix=True))
+    on.store._client.close()
+    assert off.indexer._contextualizer is None
+    assert isinstance(on.indexer._contextualizer, LLMContextualizer)

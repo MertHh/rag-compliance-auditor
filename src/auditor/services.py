@@ -7,6 +7,7 @@ from auditor.audit.nodes import AuditConfig
 from auditor.audit.runner import Auditor
 from auditor.config import Settings
 from auditor.index.qdrant_store import QdrantStore
+from auditor.ingestion.context import LLMContextualizer
 from auditor.ingestion.indexer import Indexer
 from auditor.lazy import Lazy
 from auditor.llm.base import LLMProvider
@@ -58,6 +59,8 @@ def build_services(settings: Settings) -> Services:
     retriever = Retriever(store, embedder, sparse, reranker, docstore, lock)
     audits = AuditStore(settings.db_path)
     provider = cached_provider_factory(settings)
+    contextualizer = (LLMContextualizer(lambda: provider(settings.provider))
+                      if settings.context_prefix else None)
     auditor = Auditor(retriever, docstore, audits, settings.playbooks_dir, provider,
                       AuditConfig(concurrency=settings.audit_concurrency))
 
@@ -66,7 +69,7 @@ def build_services(settings: Settings) -> Services:
             model.load()
 
     return Services(
-        indexer=Indexer(store, embedder, sparse, docstore, lock=lock),
+        indexer=Indexer(store, embedder, sparse, docstore, lock=lock, contextualizer=contextualizer),
         retriever=retriever,
         docstore=docstore,
         store=store,

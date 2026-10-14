@@ -6,7 +6,7 @@ ENV_NAMES = (
     "AUDITOR_DATA_DIR", "QDRANT_URL", "AUDITOR_COLLECTION", "EMBED_MODEL", "RERANK_MODEL",
     "AUDITOR_DEVICE", "AUDITOR_PROVIDER", "OPENAI_EVAL_MODEL", "OPENAI_SMALL_MODEL",
     "OPENAI_PRICES", "OLLAMA_HOST", "OLLAMA_MODEL", "OLLAMA_NUM_CTX", "AUDITOR_PLAYBOOKS",
-    "AUDIT_CONCURRENCY", "AUDITOR_BENCHMARKS",
+    "AUDIT_CONCURRENCY", "AUDITOR_BENCHMARKS", "AUDITOR_CONTEXT_PREFIX",
 )
 
 
@@ -31,6 +31,13 @@ def test_defaults(monkeypatch):
     assert s.audit_concurrency == 4
     assert s.benchmarks_dir == Path("benchmarks/results")
     assert s.db_path == Path("data") / "auditor.db"
+    assert s.context_prefix is False
+
+
+def test_context_prefix_flag(monkeypatch):
+    for value, expected in [("1", True), ("true", True), ("ON", True), ("0", False), ("no", False)]:
+        monkeypatch.setenv("AUDITOR_CONTEXT_PREFIX", value)
+        assert Settings.from_env().context_prefix is expected
 
 
 def test_env_overrides(monkeypatch):
