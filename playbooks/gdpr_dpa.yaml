@@ -47,7 +47,7 @@ rules:
     type: condition
     severity: high
     queries: ["personal data breach notify the controller without undue delay", "notification of a data breach within hours"]
-    criteria: "The processor notifies the controller of a personal data breach without undue delay; if a deadline is stated it is 72 hours or less (Art. 33(2))."
+    criteria: "The processor notifies the controller of a personal data breach without undue delay; if a deadline is stated it is 72 hours or less (Art. 33(2); 72 hours is the controller's own deadline to the authority under Art. 33(1))."
   - id: deletion_or_return
     title: Deletion or return at the end
     type: must_exist
@@ -71,4 +71,4 @@ rules:
     type: must_not_exist
     severity: high
     queries: ["processor may use the personal data for its own purposes", "use aggregated data to improve its services"]
-    criteria: "The processor may use the personal data for its own purposes, such as its own analytics, product development or marketing (prohibited by Art. 28(3)(a) and Art. 28(10))."
+    criteria: "The processor may use the personal data for its own purposes, such as its own analytics, product development or marketing (outside the documented instructions of Art. 28(3)(a); under Art. 28(10) a processor that determines purposes is treated as a controller)."
