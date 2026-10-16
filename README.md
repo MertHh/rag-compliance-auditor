@@ -149,14 +149,16 @@ _Source: presence.json; measured 2026-10-15._
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | ollama | qwen3:14b | 15 | 17 | 0.934 | 0.826 | 0.877 | 0.781 | 4.3 | 0 | 1584.2 | 0 |
 | ollama | qwen3:8b | 15 | 17 | 0.925 | 0.745 | 0.825 | 0.727 | 7.8 | 0 | 389 | 0 |
+| ollama | qwen3:8b | 5 | 17 | 0.911 | 0.879 | 0.895 | 0.682 | 4.7 | 0 | 461.8 | 0 |
 | ollama | qwen3:8b | 50 | 17 | 0.95 | 0.811 | 0.875 | 0.782 | 5.9 | 0 | 370.5 | 0 |
 | openai | gpt-5.4-mini | 15 | 17 | 0.951 | 0.622 | 0.752 | 0.659 | 2.7 | 0 | 151 | 0.1174 |
 | openai | gpt-5.4-mini | 5 | 17 | 0.933 | 0.7 | 0.8 | 0.698 | 0 | 0 | 156.4 | 0.1322 |
 | openai | gpt-5.5+gpt-5.4-mini | 5 | 17 | 0.925 | 0.817 | 0.867 | 0.594 | 0 | 0 | 223 | 0.6823 |
 
-_Source: audit-ollama-qwen3-14b-first15.json, audit-ollama-qwen3-8b-first15.json, audit-ollama-qwen3-8b.json, audit-openai-gpt-5-4-mini-first15.json, audit-openai-gpt-5-4-mini-first5.json, audit-openai-gpt-5-5-gpt-5-4-mini-first5.json; measured 2026-10-16._
+_Source: audit-ollama-qwen3-14b-first15.json, audit-ollama-qwen3-8b-first15.json, audit-ollama-qwen3-8b-first5.json, audit-ollama-qwen3-8b.json, audit-openai-gpt-5-4-mini-first15.json, audit-openai-gpt-5-4-mini-first5.json, audit-openai-gpt-5-5-gpt-5-4-mini-first5.json; measured 2026-10-16._
 - 15 of the first 15 of 50 subset contracts; positive class: clause missing; citation accuracy counts quotes overlapping a marked span; undecided % includes errors.
 - 15 of the first 15 of 50 subset contracts; positive class: clause missing; citation accuracy counts quotes overlapping a marked span; undecided % includes errors.
+- 5 of the first 5 of 50 subset contracts; positive class: clause missing; citation accuracy counts quotes overlapping a marked span; undecided % includes errors.
 - 50 of 50 subset contracts; positive class: clause missing; citation accuracy counts quotes overlapping a marked span; undecided % includes errors.
 - 15 of the first 15 of 50 subset contracts; positive class: clause missing; citation accuracy counts quotes overlapping a marked span; undecided % includes errors.
 - 5 of the first 5 of 50 subset contracts; positive class: clause missing; citation accuracy counts quotes overlapping a marked span; undecided % includes errors.
