@@ -84,3 +84,29 @@ def test_pdf_quote_gets_page_and_line_boxes(make_pdf, tmp_path):
     assert data["page"] == 2
     assert data["bboxes"][0]["page"] == 2
     assert len(data["bboxes"][0]["bbox"]) == 4
+
+
+def test_word_hyphenated_at_a_line_break_matches_the_whole_word():
+    doc = parse_text("The processor shall en-\nsure that persons authorised to process the data are bound.\n"
+                     "It shall assist the sub-\nprocessor and every sub-processor.", "dpa.txt")
+    [first, second, third] = verify_quotes(
+        doc,
+        ["The processor shall ensure that persons authorised",
+         "It shall assist the sub-processor and",
+         "processor and every subprocessor"],
+        [],
+    )
+    assert first.quote == "The processor shall en-\nsure that persons authorised"
+    assert second.quote == "It shall assist the sub-\nprocessor and"
+    assert third.quote == "processor and every sub-processor"
+
+
+def test_hyphen_between_words_on_one_line_still_needs_the_letters_to_match(sample_contract):
+    doc = parse_text("A non-exclusive licence is granted to the customer.", "x.txt")
+    assert verify_quotes(doc, ["A non exclusive licence is granted"], []) == []
+
+
+def test_quote_that_keeps_the_line_break_hyphen_with_a_space_matches():
+    doc = parse_text("the processor shall notify the con-\ntroller without undue delay.", "dpa.txt")
+    [citation] = verify_quotes(doc, ["the processor shall notify the con- troller without undue delay"], [])
+    assert citation.quote == "the processor shall notify the con-\ntroller without undue delay"
