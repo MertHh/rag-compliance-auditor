@@ -47,3 +47,12 @@ def test_dockerfile_runs_the_api_factory():
     assert '"--factory", "auditor.api.main:create_app"' in text
     ignored = (ROOT / ".dockerignore").read_text(encoding="utf-8").split()
     assert {".env", ".venv", "data"} <= set(ignored)
+
+
+def test_compose_ollama_host_is_not_taken_from_the_host_env():
+    # .env.example sets OLLAMA_HOST=http://localhost:11434 for running on the host; inside the
+    # container localhost is the container itself, so compose must not substitute that variable.
+    compose_text = (ROOT / "docker-compose.yml").read_text(encoding="utf-8")
+    compose = yaml.safe_load(compose_text)
+    assert compose["services"]["api"]["environment"]["OLLAMA_HOST"] == "${DOCKER_OLLAMA_HOST:-http://ollama:11434}"
+    assert "${OLLAMA_HOST" not in compose_text
