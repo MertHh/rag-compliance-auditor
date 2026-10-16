@@ -38,6 +38,7 @@ class Indexer:
         max_child_tokens: int = 400,
         max_parent_tokens: int = 2000,
         contextualizer: Contextualizer | None = None,
+        chunker: Callable[[ParsedDocument], list[Chunk]] | None = None,
         lock: threading.Lock | None = None,
     ):
         self._store = store
@@ -47,6 +48,7 @@ class Indexer:
         self._max_child_tokens = max_child_tokens
         self._max_parent_tokens = max_parent_tokens
         self._contextualizer = contextualizer
+        self._chunker = chunker
         self._lock = lock or threading.Lock()
 
     def ingest_pdf(self, path: str | Path, metadata: dict | None = None, *,
@@ -59,17 +61,25 @@ class Indexer:
         return self._index(parse_text(text, filename), metadata, None, extract_metadata)
 
     def is_indexed(self, document_id: str) -> bool:
+        # An upsert interrupted between batches leaves fewer points than chunks: not indexed.
         with self._lock:
-            return self._docstore.exists(document_id) and self._store.has_document(document_id)
+            if not self._docstore.exists(document_id):
+                return False
+            points = self._store.document_point_count(document_id)
+            expected = self._docstore.chunk_count(document_id)
+            return points > 0 and (expected is None or points == expected)
 
     def _index(self, doc: ParsedDocument, metadata: dict | None, source_pdf: bytes | None,
                extract_metadata: MetadataFn | None) -> IngestResult:
         if self.is_indexed(doc.document_id):
             return IngestResult(doc.document_id, 0, True)
 
-        chunks = build_chunks(
-            doc, detect_sections(doc.lines), self._max_child_tokens, self._max_parent_tokens
-        )
+        if self._chunker is not None:
+            chunks = self._chunker(doc)
+        else:
+            chunks = build_chunks(
+                doc, detect_sections(doc.lines), self._max_child_tokens, self._max_parent_tokens
+            )
         if not chunks:
             raise EmptyDocumentError(f"{doc.filename}: document has no text to index")
 
@@ -96,7 +106,7 @@ class Indexer:
         # document behind it. A failed upsert is retried by the next ingest.
         # Metadata extraction (an LLM call) stays outside the lock.
         with self._lock:
-            self._docstore.save(doc, meta, source_pdf)
+            self._docstore.save(doc, meta, source_pdf, chunk_count=len(chunks))
             self._store.ensure_collection(self._embedder.dim)
             self._store.delete_document(doc.document_id)
             self._store.upsert(

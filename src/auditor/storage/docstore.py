@@ -37,11 +37,19 @@ class DocumentStore:
             json.dumps(payload, ensure_ascii=False), encoding="utf-8"
         )
 
-    def save(self, doc: ParsedDocument, metadata: dict, source_pdf: bytes | None = None) -> None:
-        self._write(doc.document_id, {"document": asdict(doc), "metadata": metadata})
+    def save(self, doc: ParsedDocument, metadata: dict, source_pdf: bytes | None = None,
+             chunk_count: int | None = None) -> None:
+        payload = {"document": asdict(doc), "metadata": metadata}
+        if chunk_count is not None:
+            payload["chunk_count"] = chunk_count
+        self._write(doc.document_id, payload)
         if source_pdf is not None:
             (self._root / f"{doc.document_id}.pdf").write_bytes(source_pdf)
         self._cache[doc.document_id] = doc
+
+    def chunk_count(self, document_id: str) -> int | None:
+        """Chunks the indexer wrote for this document; None for documents saved before it was recorded."""
+        return self._read(document_id).get("chunk_count")
 
     def exists(self, document_id: str) -> bool:
         return bool(_SAFE_ID.match(document_id)) and self._json_path(document_id).exists()

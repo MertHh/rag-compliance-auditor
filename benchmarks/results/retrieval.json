@@ -1,0 +1,35 @@
+{
+  "title": "Retrieval on CUAD (100 contracts)",
+  "created_at": "2026-10-15",
+  "rows": [
+    {
+      "config": "bm25",
+      "recall@5": 0.802,
+      "recall@30": 0.958,
+      "MRR": 0.661,
+      "queries": 867
+    },
+    {
+      "config": "dense",
+      "recall@5": 0.739,
+      "recall@30": 0.948,
+      "MRR": 0.585,
+      "queries": 867
+    },
+    {
+      "config": "hybrid",
+      "recall@5": 0.82,
+      "recall@30": 0.972,
+      "MRR": 0.672,
+      "queries": 867
+    },
+    {
+      "config": "hybrid + rerank",
+      "recall@5": 0.796,
+      "recall@30": 0.972,
+      "MRR": 0.658,
+      "queries": 867
+    }
+  ],
+  "notes": "Each query searches one contract; a hit is the first chunk overlapping a span the lawyers marked. Structural chunking, no context prefix."
+}

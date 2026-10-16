@@ -1,0 +1,74 @@
+name: GDPR data processing agreement
+rules:
+  - id: processing_instructions
+    title: Processing only on instructions
+    type: must_exist
+    severity: high
+    queries: ["process personal data only on documented instructions", "instructions of the controller"]
+    criteria: "The processor processes personal data only on documented instructions from the controller (Art. 28(3)(a))."
+  - id: processing_details
+    title: Subject matter and details of processing
+    type: must_exist
+    severity: medium
+    queries: ["subject matter and duration of the processing", "categories of data subjects types of personal data"]
+    criteria: "The agreement sets out the subject matter, duration, nature and purpose of processing, the type of personal data and the categories of data subjects (Art. 28(3))."
+  - id: staff_confidentiality
+    title: Confidentiality of authorised persons
+    type: must_exist
+    severity: medium
+    queries: ["persons authorised to process personal data confidentiality", "statutory obligation of confidentiality"]
+    criteria: "Persons authorised to process the personal data are bound by confidentiality (Art. 28(3)(b))."
+  - id: security_measures
+    title: Security measures
+    type: must_exist
+    severity: high
+    queries: ["technical and organisational measures", "security of processing Article 32"]
+    criteria: "The processor takes appropriate technical and organisational measures to secure the personal data (Art. 28(3)(c) and Art. 32)."
+  - id: subprocessor_authorisation
+    title: Sub-processors need authorisation
+    type: condition
+    severity: high
+    queries: ["engage another processor sub-processor authorisation", "inform the controller of any intended changes object"]
+    criteria: "If the processor uses sub-processors, it does so only with the controller's prior specific or general written authorisation, and under a general authorisation it informs the controller of changes so the controller can object (Art. 28(2))."
+  - id: subprocessor_obligations
+    title: Same obligations for sub-processors
+    type: must_exist
+    severity: medium
+    queries: ["same data protection obligations imposed on the sub-processor", "remain fully liable for the performance of the sub-processor"]
+    criteria: "Sub-processors are bound by the same data protection obligations, and the processor remains liable to the controller for them (Art. 28(4))."
+  - id: data_subject_rights
+    title: Help with data subject requests
+    type: must_exist
+    severity: medium
+    queries: ["assist the controller data subject requests", "rights of the data subject"]
+    criteria: "The processor assists the controller in responding to requests from data subjects exercising their rights (Art. 28(3)(e))."
+  - id: breach_notification
+    title: Breach notification without undue delay
+    type: condition
+    severity: high
+    queries: ["personal data breach notify the controller without undue delay", "notification of a data breach within hours"]
+    criteria: "The processor notifies the controller of a personal data breach without undue delay; if a deadline is stated it is 72 hours or less (Art. 33(2); 72 hours is the controller's own deadline to the authority under Art. 33(1))."
+  - id: deletion_or_return
+    title: Deletion or return at the end
+    type: must_exist
+    severity: medium
+    queries: ["delete or return all the personal data after the end of the provision of services", "return or destruction of personal data"]
+    criteria: "At the end of the services the processor deletes or returns all personal data at the controller's choice (Art. 28(3)(g))."
+  - id: audits_and_information
+    title: Audits and information
+    type: must_exist
+    severity: medium
+    queries: ["make available all information necessary to demonstrate compliance", "allow for and contribute to audits including inspections"]
+    criteria: "The processor makes available the information needed to demonstrate compliance and allows audits and inspections by the controller (Art. 28(3)(h))."
+  - id: international_transfers
+    title: Safeguards for transfers outside the EEA
+    type: condition
+    severity: medium
+    queries: ["transfer of personal data to a third country", "standard contractual clauses adequacy decision"]
+    criteria: "If personal data is transferred outside the EEA, the transfer relies on an adequacy decision or appropriate safeguards such as standard contractual clauses (Chapter V)."
+  - id: processor_own_purposes
+    title: Processor using data for its own purposes
+    type: must_not_exist
+    severity: high
+    queries: ["processor may use the personal data for its own purposes", "use aggregated data to improve its services"]
+    criteria: "The processor may use the personal data for its own purposes, such as its own analytics, product development or marketing (outside the documented instructions of Art. 28(3)(a); under Art. 28(10) a processor that determines purposes is treated as a controller)."

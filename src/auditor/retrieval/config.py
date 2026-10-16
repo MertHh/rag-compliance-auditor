@@ -9,4 +9,4 @@ class RetrievalConfig:
     candidate_k: int = 30
     final_k: int = 5
     rrf_k: int = 60
-    min_rerank_score: float = 0.05  # provisional; tuned from benchmark data in Plan 4 (0.136 vs 0.001 on the sample)
+    min_rerank_score: float = 0.005  # keeps 95% of present clauses above it on CUAD (benchmarks/results/presence.json)

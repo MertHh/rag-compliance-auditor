@@ -7,6 +7,7 @@ from auditor.audit.nodes import AuditConfig
 from auditor.audit.runner import Auditor
 from auditor.config import Settings
 from auditor.index.qdrant_store import QdrantStore
+from auditor.ingestion.context import LLMContextualizer
 from auditor.ingestion.indexer import Indexer
 from auditor.lazy import Lazy
 from auditor.llm.base import LLMProvider
@@ -53,11 +54,14 @@ def build_services(settings: Settings) -> Services:
     # Models load on first use, so a cached audit or a document listing starts at once.
     embedder = Lazy(lambda: embedders.BgeM3Embedder(settings.embed_model, settings.device))
     sparse = Lazy(lambda: embedders.Bm25SparseEncoder())
-    reranker = Lazy(lambda: rerankers.BgeReranker(settings.rerank_model, settings.device))
+    reranker = Lazy(lambda: rerankers.BgeReranker(settings.rerank_model,
+                                                  settings.rerank_device or settings.device))
     lock = threading.Lock()
     retriever = Retriever(store, embedder, sparse, reranker, docstore, lock)
     audits = AuditStore(settings.db_path)
     provider = cached_provider_factory(settings)
+    contextualizer = (LLMContextualizer(lambda: provider(settings.provider))
+                      if settings.context_prefix else None)
     auditor = Auditor(retriever, docstore, audits, settings.playbooks_dir, provider,
                       AuditConfig(concurrency=settings.audit_concurrency))
 
@@ -66,7 +70,7 @@ def build_services(settings: Settings) -> Services:
             model.load()
 
     return Services(
-        indexer=Indexer(store, embedder, sparse, docstore, lock=lock),
+        indexer=Indexer(store, embedder, sparse, docstore, lock=lock, contextualizer=contextualizer),
         retriever=retriever,
         docstore=docstore,
         store=store,

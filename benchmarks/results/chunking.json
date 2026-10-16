@@ -1,0 +1,21 @@
+{
+  "title": "Chunking (hybrid + rerank)",
+  "created_at": "2026-10-15",
+  "rows": [
+    {
+      "config": "structural",
+      "recall@5": 0.796,
+      "recall@30": 0.972,
+      "MRR": 0.658,
+      "queries": 867
+    },
+    {
+      "config": "semantic",
+      "recall@5": 0.792,
+      "recall@30": 0.983,
+      "MRR": 0.667,
+      "queries": 867
+    }
+  ],
+  "notes": "Semantic chunks break where adjacent sentence embeddings drift furthest (90th percentile), at most 400 tokens; structural chunks follow clause numbering."
+}

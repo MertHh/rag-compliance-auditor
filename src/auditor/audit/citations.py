@@ -37,13 +37,34 @@ class Citation:
         }
 
 
+def _hyphen_skip(text: str, i: int, chars: list[str]) -> int:
+    """Index to resume at when the hyphen at i joins two letters, directly or across a line break
+    ("sub-processor", "en-\\nsure", or "con- troller" as a model copies it), so a quote matches
+    whether or not it keeps the hyphen; else i."""
+    if not chars or not chars[-1].isalpha():
+        return i
+    j = i + 1
+    while j < len(text) and text[j].isspace():
+        j += 1
+    return j if j < len(text) and text[j].isalpha() else i
+
+
 def _normalize(text: str) -> tuple[str, list[int]]:
-    """Unify quote characters and collapse whitespace runs to one space.
-    Returns the normalized text and the source index of each of its characters."""
+    """Unify quote characters, drop hyphens that join two letters and collapse whitespace runs
+    to one space. Returns the normalized text and the source index of each of its characters."""
     chars: list[str] = []
     index: list[int] = []
     previous_space = False
-    for i, ch in enumerate(text.translate(_UNIFY)):
+    text = text.translate(_UNIFY)
+    i = 0
+    while i < len(text):
+        ch = text[i]
+        if ch == "-":
+            resume = _hyphen_skip(text, i, chars)
+            if resume != i:
+                i = resume
+                continue
+        i += 1
         if ch.isspace():
             if previous_space:
                 continue
@@ -51,7 +72,7 @@ def _normalize(text: str) -> tuple[str, list[int]]:
         else:
             previous_space = False
         chars.append(ch)
-        index.append(i)
+        index.append(i - 1)
     return "".join(chars), index
 
 

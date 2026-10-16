@@ -1,3 +1,4 @@
+from dataclasses import replace
 from types import SimpleNamespace
 
 import pytest
@@ -14,7 +15,7 @@ from fakes import (
 from auditor.audit.nodes import AuditConfig
 from auditor.audit.playbook import PlaybookNotFound
 from auditor.audit.prompts import Evaluation
-from auditor.audit.runner import Auditor, cache_key
+from auditor.audit.runner import Auditor, cache_key, config_fingerprint
 from auditor.index.qdrant_store import QdrantStore
 from auditor.ingestion.indexer import Indexer
 from auditor.lazy import Lazy
@@ -158,8 +159,28 @@ def test_cache_key_changes_with_each_part():
         cache_key("doc", "pb", "ollama", "m1"),
         cache_key("doc", "pb", "openai", "m2"),
         cache_key("doc", "pb", "openai", "m1", prompt_version="999"),
+        cache_key("doc", "pb", "openai", "m1", settings="abc"),
     }
-    assert base not in others and len(others) == 5
+    assert base not in others and len(others) == 6
+
+
+def test_config_fingerprint_ignores_concurrency_only():
+    base = AuditConfig()
+    assert config_fingerprint(base) == config_fingerprint(AuditConfig(concurrency=8))
+    assert config_fingerprint(base) != config_fingerprint(AuditConfig(max_sections=3))
+    looser = replace(base, retrieval=replace(base.retrieval, min_rerank_score=0.2))
+    assert config_fingerprint(base) != config_fingerprint(looser)
+    assert len(config_fingerprint(base)) == 16
+
+
+def test_changed_audit_settings_do_not_reuse_the_cache(env):
+    first = Auditor(env.retriever, env.docstore, env.audits, env.playbooks, lambda name: audit_llm(),
+                    AuditConfig(max_sections=6))
+    first.run(env.doc_id, "test_pb", "openai")
+    assert first.run(env.doc_id, "test_pb", "openai")["cached"] is True
+    other = Auditor(env.retriever, env.docstore, env.audits, env.playbooks, lambda name: audit_llm(),
+                    AuditConfig(max_sections=3))
+    assert other.run(env.doc_id, "test_pb", "openai")["cached"] is False
 
 
 def test_prepare_then_execute_with_given_id(env):

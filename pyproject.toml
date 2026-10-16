@@ -34,7 +34,7 @@ packages = ["src/auditor"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["ui"]
+pythonpath = ["ui", "."]
 markers = ["slow: downloads and runs real models"]
 addopts = "-m 'not slow'"
 filterwarnings = [
