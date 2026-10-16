@@ -42,6 +42,8 @@ troller"); model kelimeyi bütün ya da "con- troller" diye kopyalıyor, alınt�
 | qwen3:8b denetim (50 sözleşme) | F1 0.875, precision 0.950, alıntı doğruluğu 0.782, 0 hata, 370 s/denetim |
 | 8B adaylar (5 sözleşme) | qwen3:8b F1 0.895 / 0 hata; llama3.1:8b 0.545 / 4 hata; granite3.3:8b 0.293 / 8 hata |
 | qwen3:14b ve qwen3:8b, aynı ilk 15 sözleşme | 14B: F1 0.877, precision 0.934, alıntı 0.781, 0 hata, 1584 s/denetim. 8B: F1 0.825, precision 0.925, alıntı 0.727, 0 hata, 389 s/denetim |
+| OpenAI, ilk 15 sözleşme | gpt-5.4-mini: F1 0.752, precision 0.951, recall 0.622, alıntı 0.659, $0.117/denetim, toplam $1.76 |
+| OpenAI, ilk 5 sözleşme | gpt-5.5 değerlendirici: F1 0.867, alıntı 0.594, $0.68/denetim, toplam $3.41. Aynı 5 sözleşmede mini 0.800, qwen3:8b 0.895, qwen3:14b 0.914 |
 
 Yorum:
 - Hybrid arama en iyisi. Sözleşme dili kalıplı olduğu için BM25, dense aramadan iyi sonuç veriyor.
@@ -51,7 +53,11 @@ Yorum:
 - Yerel 8B model kullanılabilir düzeyde: hatasız ve ücretsiz, sözleşme başına ~6 dakika sürüyor.
 - 14B aynı sözleşmelerde F1'i 0.05 artırıyor ama bu makinede 4 kat yavaş (12 GB kartta reranker CPU'ya alınmak zorunda). Varsayılan 8B kalıyor.
 
-## Ücretli koşu önerisi
+## Ücretli koşu (kullanıcı onayıyla, 8 dolarlık bakiyeye göre küçültüldü)
+
+Gerçekleşen harcama $5.17. Aşağıdaki öneri başlangıçtaki plandı.
+
+### Başlangıç önerisi
 
 Yerel denetimlerin ortalaması: denetim başına ~118 bin girdi ve ~3.8 bin çıktı token'ı. Tokenizer farkı nedeniyle tahminler ±%30 hata payı taşır.
 

@@ -1,0 +1,21 @@
+{
+  "title": "Audit on the CUAD subset",
+  "created_at": "2026-10-16",
+  "rows": [
+    {
+      "provider": "openai",
+      "models": "gpt-5.5+gpt-5.4-mini",
+      "contracts": 5,
+      "rules": 17,
+      "missing precision": 0.925,
+      "missing recall": 0.817,
+      "missing F1": 0.867,
+      "citation accuracy": 0.594,
+      "undecided %": 0.0,
+      "errors": 0,
+      "seconds per audit": 223.0,
+      "USD per audit": 0.6823
+    }
+  ],
+  "notes": "5 of the first 5 of 50 subset contracts; positive class: clause missing; citation accuracy counts quotes overlapping a marked span; undecided % includes errors."
+}

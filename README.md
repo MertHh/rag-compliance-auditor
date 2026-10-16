@@ -16,7 +16,7 @@ Audits a contract PDF against a rule playbook and ties every finding to the exac
 - **A local 8B model is usable.** qwen3:8b (thinking off) audits a contract in about 6 minutes on an RTX 3060 with zero schema errors and $0 cost. llama3.1:8b and granite3.3:8b were clearly weaker on the first five contracts (F1 0.545 and 0.293, with schema errors). On the same first 15 contracts, qwen3:14b reached F1 0.877 against 0.825 for qwen3:8b, with citation accuracy 0.781 against 0.727, but it took about 26 minutes per contract instead of 6.5 minutes, because on a 12 GB card it only fits with the reranker moved to the CPU. The 8B model stays the default; 14B is worth it on a larger GPU.
 - **The GDPR playbook works on a real DPA.** On the European Commission's Art. 28 standard contractual clauses (Decision 2021/915 annex, 16 pages), qwen3:8b marks 11 of 12 rules compliant with verified quotes in under 3 minutes; the twelfth (processor using data for its own purposes) comes out uncertain because the model claimed a clause without quoting it. This demo also exposed words hyphenated at PDF line breaks ("con-
 troller"), which quote matching now ignores. The CUAD rows above were measured before that fix; CUAD text has almost no such breaks.
-- **OpenAI rows are not measured yet.** From the local token counts (about 118k input and 3.8k output tokens per audit), gpt-5.4-mini should cost roughly $0.11 per audit; gpt-5.5 as the judge at most $0.70. The paid runs wait for approval; `python -m benchmarks.audit_bench --provider openai --max-cost 3` adds the rows.
+- **The local model beats the OpenAI models on this task.** On the same first 15 contracts, gpt-5.4-mini reaches F1 0.752 (precision 0.951, recall 0.622, citation accuracy 0.659) at $0.117 and about 2.5 minutes per audit, below qwen3:8b (0.825). It rarely calls a clause missing, so it misses absent clauses. On the first 5 contracts, gpt-5.5 as the judge reaches F1 0.867 against 0.800 for mini, but its citation accuracy is lower (0.594 against 0.698) and it costs $0.68 per audit; qwen3:8b scores 0.895 and qwen3:14b 0.914 on those 5. Five contracts are only a rough check. gpt-5.4-mini stays the OpenAI default for its cost; the free local model is the recommended default.
 
 ## Architecture
 
@@ -150,11 +150,17 @@ _Source: presence.json; measured 2026-10-15._
 | ollama | qwen3:14b | 15 | 17 | 0.934 | 0.826 | 0.877 | 0.781 | 4.3 | 0 | 1584.2 | 0 |
 | ollama | qwen3:8b | 15 | 17 | 0.925 | 0.745 | 0.825 | 0.727 | 7.8 | 0 | 389 | 0 |
 | ollama | qwen3:8b | 50 | 17 | 0.95 | 0.811 | 0.875 | 0.782 | 5.9 | 0 | 370.5 | 0 |
+| openai | gpt-5.4-mini | 15 | 17 | 0.951 | 0.622 | 0.752 | 0.659 | 2.7 | 0 | 151 | 0.1174 |
+| openai | gpt-5.4-mini | 5 | 17 | 0.933 | 0.7 | 0.8 | 0.698 | 0 | 0 | 156.4 | 0.1322 |
+| openai | gpt-5.5+gpt-5.4-mini | 5 | 17 | 0.925 | 0.817 | 0.867 | 0.594 | 0 | 0 | 223 | 0.6823 |
 
-_Source: audit-ollama-qwen3-14b-first15.json, audit-ollama-qwen3-8b-first15.json, audit-ollama-qwen3-8b.json; measured 2026-10-16._
+_Source: audit-ollama-qwen3-14b-first15.json, audit-ollama-qwen3-8b-first15.json, audit-ollama-qwen3-8b.json, audit-openai-gpt-5-4-mini-first15.json, audit-openai-gpt-5-4-mini-first5.json, audit-openai-gpt-5-5-gpt-5-4-mini-first5.json; measured 2026-10-16._
 - 15 of the first 15 of 50 subset contracts; positive class: clause missing; citation accuracy counts quotes overlapping a marked span; undecided % includes errors.
 - 15 of the first 15 of 50 subset contracts; positive class: clause missing; citation accuracy counts quotes overlapping a marked span; undecided % includes errors.
 - 50 of 50 subset contracts; positive class: clause missing; citation accuracy counts quotes overlapping a marked span; undecided % includes errors.
+- 15 of the first 15 of 50 subset contracts; positive class: clause missing; citation accuracy counts quotes overlapping a marked span; undecided % includes errors.
+- 5 of the first 5 of 50 subset contracts; positive class: clause missing; citation accuracy counts quotes overlapping a marked span; undecided % includes errors.
+- 5 of the first 5 of 50 subset contracts; positive class: clause missing; citation accuracy counts quotes overlapping a marked span; undecided % includes errors.
 
 <!-- BENCHMARKS:END -->
 
