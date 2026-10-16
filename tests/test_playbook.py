@@ -41,6 +41,23 @@ def test_load_valid(tmp_path):
     assert len(loaded.sha256) == 64
 
 
+def test_line_endings_do_not_change_the_fingerprint(tmp_path):
+    variants = {
+        "lf": VALID,
+        "crlf": VALID.replace("\n", "\r\n"),
+        "mixed": VALID.replace("\n", "\r\n", 3),
+    }
+    shas = set()
+    for name, text in variants.items():
+        path = tmp_path / f"{name}.yaml"
+        path.write_bytes(text.encode("utf-8"))
+        shas.add(load_playbook(path).sha256)
+    changed = tmp_path / "changed.yaml"
+    changed.write_bytes(VALID.replace("high", "low").encode("utf-8"))
+    assert len(shas) == 1
+    assert load_playbook(changed).sha256 not in shas
+
+
 def test_error_names_rule_and_field(tmp_path):
     message = _error(_write(tmp_path, VALID.replace("severity: high", "severity: critical")))
     assert "rule 'liability_cap' (rules[0])" in message

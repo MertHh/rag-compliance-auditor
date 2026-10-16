@@ -89,7 +89,8 @@ def load_playbook(path: str | Path) -> LoadedPlaybook:
     except ValidationError as exc:
         details = "; ".join(_describe(raw, error) for error in exc.errors())
         raise PlaybookError(f"{path.name}: {details}") from exc
-    return LoadedPlaybook(path.stem, playbook, hashlib.sha256(data).hexdigest())
+    # Line endings are normalized so a checkout or an editor that rewrites them keeps the audit cache.
+    return LoadedPlaybook(path.stem, playbook, hashlib.sha256(data.replace(b"\r\n", b"\n")).hexdigest())
 
 
 def list_playbooks(directory: str | Path) -> list[str]:
