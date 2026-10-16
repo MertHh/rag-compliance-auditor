@@ -1,0 +1,23 @@
+{
+  "title": "Context prefix (50-contract subset, hybrid + rerank)",
+  "created_at": "2026-10-16",
+  "rows": [
+    {
+      "config": "off",
+      "context model": "-",
+      "recall@5": 0.808,
+      "recall@30": 0.995,
+      "MRR": 0.685,
+      "queries": 365
+    },
+    {
+      "config": "on",
+      "context model": "ollama qwen3:8b",
+      "recall@5": 0.808,
+      "recall@30": 0.992,
+      "MRR": 0.684,
+      "queries": 365
+    }
+  ],
+  "notes": "One LLM sentence per chunk, prepended before embedding. Cost $0.00; 0 chunks without a prefix."
+}

@@ -1,0 +1,21 @@
+{
+  "title": "Audit on the CUAD subset",
+  "created_at": "2026-10-16",
+  "rows": [
+    {
+      "provider": "ollama",
+      "models": "qwen3:8b",
+      "contracts": 15,
+      "rules": 17,
+      "missing precision": 0.925,
+      "missing recall": 0.745,
+      "missing F1": 0.825,
+      "citation accuracy": 0.727,
+      "undecided %": 7.8,
+      "errors": 0,
+      "seconds per audit": 389.0,
+      "USD per audit": 0.0
+    }
+  ],
+  "notes": "15 of the first 15 of 50 subset contracts; positive class: clause missing; citation accuracy counts quotes overlapping a marked span; undecided % includes errors."
+}
