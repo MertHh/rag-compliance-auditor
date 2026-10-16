@@ -138,3 +138,28 @@ def test_user_metadata_none_does_not_erase_extracted_fields(parts, sample_contra
     meta = docstore.metadata(result.document_id)
     assert meta["doc_type"] == "Services Agreement"
     assert meta["jurisdiction"] == "Delaware"
+
+
+def test_upsert_interrupted_between_batches_is_not_indexed(parts, sample_contract, monkeypatch):
+    # Ctrl+C after the first upsert batch leaves some of the chunks in the store; the rerun must
+    # index the document again instead of accepting the partial copy.
+    store, _, _ = parts
+    real_upsert = store.upsert
+
+    def first_batch_then_interrupt(chunks, dense, sparse, meta):
+        real_upsert(chunks[:1], dense[:1], sparse[:1], meta)
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(store, "upsert", first_batch_then_interrupt)
+    with pytest.raises(KeyboardInterrupt):
+        _indexer(parts).ingest_text(sample_contract, "c.txt")
+    monkeypatch.setattr(store, "upsert", real_upsert)
+
+    indexer = _indexer(parts)
+    from auditor.ingestion.parser import parse_text
+    document_id = parse_text(sample_contract, "c.txt").document_id
+    assert indexer.is_indexed(document_id) is False
+    result = indexer.ingest_text(sample_contract, "c.txt")
+    assert result.already_indexed is False and result.chunk_count > 1
+    assert store.document_point_count(document_id) == result.chunk_count
+    assert indexer.is_indexed(document_id) is True

@@ -61,8 +61,13 @@ class Indexer:
         return self._index(parse_text(text, filename), metadata, None, extract_metadata)
 
     def is_indexed(self, document_id: str) -> bool:
+        # An upsert interrupted between batches leaves fewer points than chunks: not indexed.
         with self._lock:
-            return self._docstore.exists(document_id) and self._store.has_document(document_id)
+            if not self._docstore.exists(document_id):
+                return False
+            points = self._store.document_point_count(document_id)
+            expected = self._docstore.chunk_count(document_id)
+            return points > 0 and (expected is None or points == expected)
 
     def _index(self, doc: ParsedDocument, metadata: dict | None, source_pdf: bytes | None,
                extract_metadata: MetadataFn | None) -> IngestResult:
@@ -101,7 +106,7 @@ class Indexer:
         # document behind it. A failed upsert is retried by the next ingest.
         # Metadata extraction (an LLM call) stays outside the lock.
         with self._lock:
-            self._docstore.save(doc, meta, source_pdf)
+            self._docstore.save(doc, meta, source_pdf, chunk_count=len(chunks))
             self._store.ensure_collection(self._embedder.dim)
             self._store.delete_document(doc.document_id)
             self._store.upsert(

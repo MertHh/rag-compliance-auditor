@@ -136,12 +136,15 @@ class QdrantStore:
         return self._query(query, SPARSE, limit, flt)
 
     def has_document(self, document_id: str) -> bool:
+        return self.document_point_count(document_id) > 0
+
+    def document_point_count(self, document_id: str) -> int:
         if not self._exists():
-            return False
+            return 0
         result = self._client.count(
             self._collection, count_filter=_document_filter(document_id), exact=True
         )
-        return result.count > 0
+        return result.count
 
     def delete_document(self, document_id: str) -> None:
         if not self._exists():
