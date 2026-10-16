@@ -173,8 +173,10 @@ def main(argv: list[str] | None = None, stack_factory=None, provider_factory=Non
 
     contracts_by_title = {c.title: c for c in load_cuad(args.cuad)[0]}
     contracts = [contracts_by_title[title] for title in load_subset(args.subset)]
+    subset_size = len(contracts)
     if args.contracts:
         contracts = contracts[:args.contracts]
+    partial = len(contracts) < subset_size
     if not contracts:
         print("error: no contracts to audit")
         return 1
@@ -211,7 +213,11 @@ def main(argv: list[str] | None = None, stack_factory=None, provider_factory=Non
 
     provider_name = prepared.provider.name
     slug = re.sub(r"[^a-z0-9]+", "-", f"{provider_name}-{models}".lower()).strip("-")
-    notes = (f"{done} of {len(contracts)} subset contracts; positive class: clause missing; "
+    if partial:
+        slug += f"-first{len(contracts)}"
+    scope = (f"{done} of the first {len(contracts)} of {subset_size} subset contracts" if partial
+             else f"{done} of {len(contracts)} subset contracts")
+    notes = (f"{scope}; positive class: clause missing; "
              f"citation accuracy counts quotes overlapping a marked span; "
              f"undecided % includes errors.")
     if stopped:

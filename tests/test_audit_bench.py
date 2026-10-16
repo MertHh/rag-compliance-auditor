@@ -162,3 +162,16 @@ def test_resume_does_not_rerun_audits_with_errors(setup):
     assert len(AuditStore(setup["data"] / "audits.db").list_audits()) == 3
     assert _run(setup, Flaky(0.0)) == 0
     assert len(AuditStore(setup["data"] / "audits.db").list_audits()) == 3
+
+
+def test_partial_run_names_its_file_and_note_after_the_first_contracts(setup):
+    # A quick --contracts run must not overwrite the full-subset file or read as the full subset.
+    assert _run(setup, PricedLLM(0.0)) == 0
+    assert _run(setup, PricedLLM(0.0), "--contracts", "2") == 0
+    names = sorted(p.name for p in setup["out"].glob("audit-*.json"))
+    assert names == ["audit-fake-fake-eval-fake-small-first2.json", "audit-fake-fake-eval-fake-small.json"]
+    partial = json.loads((setup["out"] / names[0]).read_text(encoding="utf-8"))
+    assert partial["rows"][0]["contracts"] == 2
+    assert partial["notes"].startswith("2 of the first 2 of 3 subset contracts;")
+    full = json.loads((setup["out"] / names[1]).read_text(encoding="utf-8"))
+    assert full["notes"].startswith("3 of 3 subset contracts;")
