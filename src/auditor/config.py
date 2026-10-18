@@ -52,7 +52,7 @@ class Settings:
             embed_model=os.environ.get("EMBED_MODEL", "BAAI/bge-m3"),
             rerank_model=os.environ.get("RERANK_MODEL", "BAAI/bge-reranker-v2-m3"),
             device=os.environ.get("AUDITOR_DEVICE") or None,
-            provider=os.environ.get("AUDITOR_PROVIDER", "openai"),
+            provider=os.environ.get("AUDITOR_PROVIDER", "ollama"),
             openai_eval_model=os.environ.get("OPENAI_EVAL_MODEL") or None,
             openai_small_model=os.environ.get("OPENAI_SMALL_MODEL") or None,
             openai_prices=os.environ.get("OPENAI_PRICES", ""),

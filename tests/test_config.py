@@ -21,7 +21,7 @@ def test_defaults(monkeypatch):
     assert s.embed_model == "BAAI/bge-m3"
     assert s.rerank_model == "BAAI/bge-reranker-v2-m3"
     assert s.device is None
-    assert s.provider == "openai"
+    assert s.provider == "ollama"
     assert s.openai_eval_model is None
     assert s.openai_small_model is None
     assert s.openai_prices == ""

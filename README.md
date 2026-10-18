@@ -39,7 +39,7 @@ Per rule, the agent searches the contract, rewrites the query when evidence is w
 ## Quick start (Docker)
 
 ```bash
-cp .env.example .env          # add OPENAI_API_KEY, or set AUDITOR_PROVIDER=ollama
+cp .env.example .env          # local Ollama by default; for OpenAI set AUDITOR_PROVIDER=openai and OPENAI_API_KEY
 docker compose up -d          # Qdrant, API on :8000, UI on :8501
 ```
 
@@ -65,7 +65,7 @@ Command line: `python -m auditor.cli ingest contract.pdf`, `... audit <document_
 
 | | OpenAI | Ollama |
 |---|---|---|
-| Setting | `AUDITOR_PROVIDER=openai`, `OPENAI_API_KEY` | `AUDITOR_PROVIDER=ollama`, `OLLAMA_MODEL` |
+| Setting | `AUDITOR_PROVIDER=openai`, `OPENAI_API_KEY` | `AUDITOR_PROVIDER=ollama` (default), `OLLAMA_MODEL` |
 | Models | `OPENAI_EVAL_MODEL` judges rules; `OPENAI_SMALL_MODEL` rewrites queries, scans, extracts metadata, answers questions | one model for everything |
 | Data | the retrieved sections are sent to OpenAI | nothing leaves the machine; the only network traffic is the first model download |
 
