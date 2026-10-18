@@ -204,3 +204,7 @@ python -m benchmarks.make_readme_table
 - Scanned PDFs without a text layer are rejected; there is no OCR.
 - One API process: audits run on background threads and are lost if the process stops mid-run.
 - No user accounts; run it on a trusted network.
+
+## License
+
+MIT, see [LICENSE](LICENSE).

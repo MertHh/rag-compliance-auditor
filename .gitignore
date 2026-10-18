@@ -4,3 +4,7 @@ __pycache__/
 *.egg-info/
 .pytest_cache/
 .env
+
+# Internal planning notes (kept locally)
+docs/superpowers/
+docs/benchmark-review.md

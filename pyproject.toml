@@ -3,6 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
+license = { text = "MIT" }
 name = "auditor"
 version = "0.1.0"
 description = "Hybrid RAG compliance auditor"
