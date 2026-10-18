@@ -7,6 +7,14 @@ Audits a contract PDF against a rule playbook and ties every finding to the exac
 - **Domain-agnostic:** the rules are a YAML playbook. A second playbook (GDPR data processing agreements) runs on the same engine.
 - **Private mode:** with Ollama, no document leaves the machine.
 
+![A compliant finding: the model's reasoning on the left, the verified quote highlighted in the contract PDF on the right](docs/images/evidence.jpg)
+
+| Audit summary | Hybrid search, stage by stage | Agent trace |
+|---|---|---|
+| [![Risk score and findings table for a GDPR audit](docs/images/audit.jpg)](docs/images/audit.jpg) | [![BM25, dense, RRF and rerank scores per result, with the hit highlighted in the PDF](docs/images/search.jpg)](docs/images/search.jpg) | [![Timeline of search and evaluate steps per rule, with tokens and cost](docs/images/trace.jpg)](docs/images/trace.jpg) |
+
+Screenshots: the GDPR playbook on the EU Art. 28 standard contractual clauses, run locally with qwen3:8b (12 rules, 169 s, $0).
+
 ## Findings
 
 - **Hybrid search wins; lexical beats dense on contracts.** On 867 queries over 100 CUAD contracts, BM25 + dense fused with RRF reaches recall@5 0.820 and MRR 0.672, ahead of BM25 alone (0.802) and dense alone (0.739). Contract wording is formulaic, so exact terms matter.
