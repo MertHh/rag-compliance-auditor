@@ -286,3 +286,14 @@ def test_link_fills_the_search_query(fake):
     assert not at.exception
     assert at.text_input(key="search_query").value == "liability cap"
     assert [call[1] for call in fake.calls if call[0] == "search"] == ["liability cap"]
+
+
+def test_link_asks_the_question_on_one_document(fake):
+    at = run_screen("ask", {"q": "What is the cap?", "document": DOC_ID})
+    assert not at.exception
+    assert at.text_input[0].value == "What is the cap?"
+    assert at.multiselect[0].value == [DOC_ID]
+    assert ("ask", "What is the cap?", {"document_ids": [DOC_ID]}) in [call[:3] for call in fake.calls]
+    assert any("Liability is capped" in text for text in texts(at.markdown))
+    at.run()
+    assert [call[0] for call in fake.calls].count("ask") == 1

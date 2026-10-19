@@ -1,10 +1,10 @@
-"""Writes the benchmark tables into README.md between the two markers, from
+"""Writes the benchmark tables into docs/benchmarks.md between the two markers, from
 benchmarks/results/*.json only; numbers are never typed by hand.
 
-Run: python -m benchmarks.make_readme_table           rewrite README.md
-     python -m benchmarks.make_readme_table --check   exit 1 when README.md is out of date
+Run: python -m benchmarks.make_readme_table           rewrite docs/benchmarks.md
+     python -m benchmarks.make_readme_table --check   exit 1 when the tables are out of date
 
-Exit 1 also when any result file is unreadable; the README still shows the error line.
+Exit 1 also when any result file is unreadable; the page still shows the error line.
 """
 
 import argparse
@@ -98,13 +98,13 @@ def render(results: list[dict]) -> str:
 def update_readme(text: str, tables: str) -> str:
     start, end = text.find(START), text.find(END)
     if start == -1 or end == -1 or end < start:
-        raise ValueError(f"README has no benchmark markers; add {START} and {END}")
+        raise ValueError(f"no benchmark markers; add {START} and {END}")
     return text[:start + len(START)] + "\n\n" + tables + "\n\n" + text[end:]
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="make_readme_table")
-    parser.add_argument("--readme", default="README.md")
+    parser.add_argument("--readme", default="docs/benchmarks.md")
     parser.add_argument("--results", default="benchmarks/results")
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args(argv)
@@ -123,7 +123,7 @@ def main(argv: list[str] | None = None) -> int:
         status = 1
     if args.check:
         if updated != text:
-            print("README.md benchmark tables are out of date; run python -m benchmarks.make_readme_table")
+            print(f"{readme} benchmark tables are out of date; run python -m benchmarks.make_readme_table")
             status = 1
         return status
     if updated != text:

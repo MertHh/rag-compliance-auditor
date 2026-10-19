@@ -9,13 +9,20 @@ st.title("Ask the documents")
 docs = shared.load_documents(client)
 by_id = {doc["document_id"]: doc for doc in docs}
 
+linked = shared.from_link("q")
+linked_doc = shared.from_link("document")
+if linked:
+    st.session_state["ask_question"] = linked
+if linked_doc in by_id:
+    st.session_state["ask_documents"] = [linked_doc]
+
 with st.form("ask"):
-    question = st.text_input("Question", placeholder="What is the liability cap?")
-    selected = st.multiselect("Only these documents (optional)", list(by_id),
+    question = st.text_input("Question", key="ask_question", placeholder="What is the liability cap?")
+    selected = st.multiselect("Only these documents (optional)", list(by_id), key="ask_documents",
                               format_func=lambda i: document_label(by_id[i]))
     asked = st.form_submit_button("Ask", type="primary")
 
-if asked:
+if asked or linked:
     if not question.strip():
         st.warning("Type a question first.")
     else:
