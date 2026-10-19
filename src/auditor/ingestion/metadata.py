@@ -12,10 +12,12 @@ MAX_PAGES = 2
 MAX_CHARS = 8000
 
 METADATA_SYSTEM = (
-    "You extract metadata from the first pages of a contract. doc_type is a short contract type "
-    "in English, such as 'Master Services Agreement' or 'Non-Disclosure Agreement'. date is the "
-    "effective or signing date as YYYY-MM-DD. parties are the legal names of the contracting "
-    "parties. jurisdiction is the governing law, such as 'New York' or 'England and Wales'. "
+    "You extract metadata from the first pages of a document. doc_type is a short document type "
+    "in English, such as 'Master Services Agreement', 'Research Article' or 'Security Policy'. "
+    "date is the effective, signing or publication date as YYYY-MM-DD. parties are the legal "
+    "names of the contracting parties, or for a document that is not a contract its authors or "
+    "issuing organisations. jurisdiction is the governing law, such as 'New York' or 'England "
+    "and Wales'. "
     "Use null, or an empty list for parties, when the text does not state a value."
 )
 

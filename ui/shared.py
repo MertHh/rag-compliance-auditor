@@ -21,7 +21,7 @@ def load_documents(client: ApiClient) -> list[dict]:
 def document_picker(docs: list[dict], label: str = "Document") -> dict | None:
     """A document selector whose choice carries over between pages."""
     if not docs:
-        st.info("No documents yet. Upload a contract on the Documents page.")
+        st.info("No documents yet. Upload a PDF on the Documents page.")
         return None
     by_id = {doc["document_id"]: doc for doc in docs}
     ids = list(by_id)

@@ -1,4 +1,6 @@
 name: Commercial contract
+document: contract   # singular nouns the prompts use; contract/clause are the benchmarked prompts
+item: clause
 rules:
   - id: liability_cap
     title: Limitation of liability

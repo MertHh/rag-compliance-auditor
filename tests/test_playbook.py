@@ -41,6 +41,14 @@ def test_load_valid(tmp_path):
     assert len(loaded.sha256) == 64
 
 
+def test_wording_defaults_to_document_and_passage(tmp_path):
+    playbook = load_playbook(_write(tmp_path, VALID)).playbook
+    assert (playbook.document, playbook.item) == ("document", "passage")
+    named = load_playbook(_write(tmp_path, "document: research paper\nitem: statement\n" + VALID)).playbook
+    assert (named.document, named.item) == ("research paper", "statement")
+    assert "item" in _error(_write(tmp_path, "item: ''\n" + VALID))
+
+
 def test_line_endings_do_not_change_the_fingerprint(tmp_path):
     variants = {
         "lf": VALID,

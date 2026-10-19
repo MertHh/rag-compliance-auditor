@@ -9,7 +9,7 @@ from typing import Callable
 from auditor.audit.graph import build_rule_graph
 from auditor.audit.nodes import AuditConfig, RuleNodes, initial_state
 from auditor.audit.playbook import LoadedPlaybook, find_playbook
-from auditor.audit.prompts import PROMPT_VERSION
+from auditor.audit.prompts import PROMPT_VERSION, Wording
 from auditor.audit.report import build_finding, build_report
 from auditor.audit.trace import TraceRecorder
 from auditor.llm.base import LLMProvider, ProviderUnavailableError, models_label
@@ -76,10 +76,11 @@ class Auditor:
 
     def execute(self, prepared: PreparedAudit, audit_id: str | None = None) -> dict:
         recorder = TraceRecorder()
+        playbook = prepared.playbook.playbook
         nodes = RuleNodes(self._retriever, self._docstore, prepared.provider, recorder,
-                          prepared.document_id, self._config)
+                          prepared.document_id, self._config, Wording(playbook.document, playbook.item))
         graph = build_rule_graph(nodes, self._config.max_rewrites)
-        rules = prepared.playbook.playbook.rules
+        rules = playbook.rules
         started = time.perf_counter()
         outcomes = graph.batch(
             [initial_state(rule) for rule in rules],

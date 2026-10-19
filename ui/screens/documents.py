@@ -8,7 +8,7 @@ client = shared.get_client()
 st.title("Documents")
 
 with st.form("upload", clear_on_submit=True):
-    file = st.file_uploader("Contract PDF", type=["pdf"])
+    file = st.file_uploader("PDF document", type=["pdf"])
     left, middle, right = st.columns(3)
     doc_type = left.text_input("Document type (optional)")
     signed = middle.text_input("Date, YYYY-MM-DD (optional)")
@@ -43,6 +43,6 @@ if submitted:
 
 docs = shared.load_documents(client)
 if not docs:
-    st.info("No documents yet. Upload a contract PDF above.")
+    st.info("No documents yet. Upload a PDF above.")
     st.stop()
 st.dataframe(document_rows(docs), hide_index=True)

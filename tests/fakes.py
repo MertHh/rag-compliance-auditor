@@ -69,6 +69,7 @@ class FakeLLM:
         self.handlers = dict(handlers or {})
         self.unavailable = unavailable
         self.calls: list[tuple[str, str, str]] = []
+        self.systems: list[str] = []
         self._lock = threading.Lock()
 
     def model_for(self, tier):
@@ -81,6 +82,7 @@ class FakeLLM:
     def complete(self, system, user, schema, tier):
         with self._lock:
             self.calls.append((schema.__name__, tier, user))
+            self.systems.append(system)
         handler = self.handlers.get(schema.__name__)
         if handler is None:
             raise LLMError(f"no fake response for {schema.__name__}")

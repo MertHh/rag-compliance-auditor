@@ -3,7 +3,7 @@ import threading
 import pytest
 
 from auditor.audit.playbook import Rule
-from auditor.audit.prompts import evaluate_prompt, relevance_prompt, rewrite_prompt
+from auditor.audit.prompts import Wording, evaluate_prompt, relevance_prompt, rewrite_prompt
 from auditor.audit.trace import TraceRecorder
 from auditor.llm.base import LLMResult, Usage
 from auditor.retrieval.pipeline import ParentPassage
@@ -70,3 +70,27 @@ def test_rewrite_and_relevance_prompts():
     prompt = relevance_prompt(RULE, PASSAGE)
     assert prompt.startswith("Rule: Unlimited liability\n")
     assert "[Section 1: 3 > 3.1]" in prompt
+
+
+# The prompts the CUAD benchmarks were measured with, frozen word for word.
+CONTRACT_SYSTEM = {'evaluate': "You review contracts against compliance rules. You receive one rule and numbered sections from a single contract. Set clause_found to true if the sections contain a clause on the rule's topic. Set matches_criteria to true if that clause matches the rule's criteria. When the rule says the clause is prohibited, the criteria describe the prohibited clause, and matches_criteria means the text is that prohibited clause. Copy the decisive sentences into quotes word for word from the sections, without changing, joining or shortening them. If clause_found is false, return no quotes and set matches_criteria to false. Explain the decision in reasoning in two or three sentences.", 'rewrite': 'You write search queries for finding a clause in a contract. Return two or three short queries worded differently from the queries that already failed, using synonyms and the terms contracts commonly use for this clause.', 'relevance': "You check whether one contract section is relevant to a compliance rule. Set relevant to true only if the section contains a clause on the rule's topic, whether or not the clause meets the criteria."}
+CONTRACT_KIND = {'must_exist': 'The contract must contain this clause.', 'must_not_exist': 'The contract must NOT contain this clause; it is prohibited.', 'condition': 'If the contract has this clause, the clause must meet the criteria.'}
+
+
+def test_contract_wording_reproduces_the_benchmarked_prompts():
+    wording = Wording("contract", "clause")
+    assert wording.evaluate_system() == CONTRACT_SYSTEM["evaluate"]
+    assert wording.rewrite_system() == CONTRACT_SYSTEM["rewrite"]
+    assert wording.relevance_system() == CONTRACT_SYSTEM["relevance"]
+    assert {kind: wording.kind(kind) for kind in CONTRACT_KIND} == CONTRACT_KIND
+
+
+def test_default_wording_names_no_domain():
+    wording = Wording()
+    texts = [wording.evaluate_system(), wording.rewrite_system(), wording.relevance_system(),
+             evaluate_prompt(RULE, [PASSAGE])]
+    assert not any("contract" in text or "clause " in text for text in texts)
+    assert "The document must NOT contain this passage" in evaluate_prompt(RULE, [PASSAGE])
+    paper = Wording("research paper", "statement")
+    assert "terms research papers commonly use" in paper.rewrite_system()
+    assert "The research paper must NOT contain this statement" in evaluate_prompt(RULE, [PASSAGE], paper)

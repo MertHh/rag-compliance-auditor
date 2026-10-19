@@ -43,6 +43,9 @@ class Playbook(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     name: str = Field(min_length=1)
+    # Singular nouns for the prompts: what the rules are checked against, what one rule looks for.
+    document: str = Field("document", min_length=1)
+    item: str = Field("passage", min_length=1)
     rules: list[Rule] = Field(min_length=1)
 
     @model_validator(mode="after")

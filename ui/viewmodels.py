@@ -37,7 +37,7 @@ def _escape_list_marker(match: re.Match) -> str:
 
 
 def md_escape(text: str) -> str:
-    """Escapes contract or LLM text for st.markdown, so "$500" stays money rather than LaTeX
+    """Escapes document or LLM text for st.markdown, so "$500" stays money rather than LaTeX
     and stray *, _, # or list markers do not turn into formatting."""
     escaped = _MD_SPECIAL.sub(r"\\\1", text)
     return _MD_LINE_START.sub(_escape_list_marker, escaped)

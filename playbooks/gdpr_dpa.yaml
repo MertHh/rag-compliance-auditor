@@ -1,4 +1,6 @@
 name: GDPR data processing agreement
+document: contract   # singular nouns the prompts use; contract/clause are the benchmarked prompts
+item: clause
 rules:
   - id: processing_instructions
     title: Processing only on instructions

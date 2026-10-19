@@ -35,7 +35,7 @@ class ApiClient:
     @classmethod
     def from_env(cls) -> "ApiClient":
         url = os.environ.get("AUDITOR_API_URL", DEFAULT_URL)
-        # Uploads embed a whole contract, so reads may be slow; a down API fails fast.
+        # Uploads embed a whole document, so reads may be slow; a down API fails fast.
         return cls(httpx.Client(base_url=url, timeout=httpx.Timeout(300.0, connect=5.0)))
 
     def _request(self, method: str, path: str, **kwargs) -> httpx.Response:

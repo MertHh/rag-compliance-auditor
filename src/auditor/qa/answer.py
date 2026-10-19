@@ -13,7 +13,7 @@ from auditor.storage.docstore import DocumentStore
 NOT_FOUND_MESSAGE = "I could not find a statement about this in these documents."
 
 QA_SYSTEM = (
-    "You answer questions about contracts using only the numbered sections you receive. "
+    "You answer questions about documents using only the numbered sections you receive. "
     "Answer in one to three sentences. Copy the sentences that support the answer into quotes "
     "word for word, without changing, joining or shortening them. If the sections do not answer "
     "the question, return an empty answer and no quotes."

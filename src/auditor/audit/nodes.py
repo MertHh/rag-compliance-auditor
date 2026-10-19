@@ -4,12 +4,10 @@ from typing import TypedDict
 from auditor.audit.citations import Citation, verify_quotes
 from auditor.audit.playbook import Rule
 from auditor.audit.prompts import (
-    EVALUATE_SYSTEM,
-    RELEVANCE_SYSTEM,
-    REWRITE_SYSTEM,
     Evaluation,
     Relevance,
     RewrittenQueries,
+    Wording,
     evaluate_prompt,
     relevance_prompt,
     rewrite_prompt,
@@ -77,13 +75,15 @@ def _add_examined(examined: list[str], passages: list[ParentPassage]) -> list[st
 
 class RuleNodes:
     def __init__(self, retriever: Retriever, docstore: DocumentStore, provider: LLMProvider,
-                 recorder: TraceRecorder, document_id: str, config: AuditConfig):
+                 recorder: TraceRecorder, document_id: str, config: AuditConfig,
+                 wording: Wording = Wording()):
         self._retriever = retriever
         self._docstore = docstore
         self._provider = provider
         self._recorder = recorder
         self._document_id = document_id
         self._config = config
+        self._wording = wording
         self._filter = SearchFilter(document_ids=[document_id])
 
     def _search(self, query: str, config: RetrievalConfig) -> RetrievalResult:
@@ -110,8 +110,8 @@ class RuleNodes:
         rule = state["rule"]
         with self._recorder.node(rule.id, "rewrite", "; ".join(state["tried"])) as span:
             try:
-                result = complete_with_retry(self._provider, REWRITE_SYSTEM,
-                                             rewrite_prompt(rule, state["tried"]),
+                result = complete_with_retry(self._provider, self._wording.rewrite_system(),
+                                             rewrite_prompt(rule, state["tried"], self._wording),
                                              RewrittenQueries, "small")
             except LLMError as exc:
                 span.output = f"error: {exc}"
@@ -133,8 +133,9 @@ class RuleNodes:
                                         reasoning="No candidate sections were retrieved for this rule.")
                 return {"evaluation": evaluation, "eval_attempts": attempts, "examined": examined}
             try:
-                result = complete_with_retry(self._provider, EVALUATE_SYSTEM,
-                                             evaluate_prompt(rule, passages), Evaluation, "eval")
+                result = complete_with_retry(self._provider, self._wording.evaluate_system(),
+                                             evaluate_prompt(rule, passages, self._wording),
+                                             Evaluation, "eval")
             except LLMError as exc:
                 span.output = f"error: {exc}"
                 return {"error": f"evaluation failed: {exc}", "examined": examined}
@@ -172,8 +173,9 @@ class RuleNodes:
             relevant: list[ParentPassage] = []
             try:
                 for passage in candidates:
-                    result = complete_with_retry(self._provider, RELEVANCE_SYSTEM,
-                                                 relevance_prompt(rule, passage), Relevance, "small")
+                    result = complete_with_retry(self._provider, self._wording.relevance_system(),
+                                                 relevance_prompt(rule, passage, self._wording),
+                                                 Relevance, "small")
                     span.add(result)
                     if result.value.relevant:
                         relevant.append(passage)

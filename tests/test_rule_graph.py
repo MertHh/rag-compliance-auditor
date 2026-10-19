@@ -4,7 +4,7 @@ from fakes import FakeEmbedder, FakeLLM, FakeReranker, FakeSparseEncoder, sequen
 from auditor.audit.graph import build_rule_graph
 from auditor.audit.nodes import AuditConfig, RuleNodes, initial_state
 from auditor.audit.playbook import Rule
-from auditor.audit.prompts import Evaluation, Relevance, RewrittenQueries
+from auditor.audit.prompts import Evaluation, Relevance, RewrittenQueries, Wording
 from auditor.audit.scoring import Status
 from auditor.audit.trace import TraceRecorder
 from auditor.index.qdrant_store import QdrantStore
@@ -36,10 +36,10 @@ def _rule(rule_type="must_exist", queries=("total aggregate liability",)):
                 queries=list(queries), criteria="Total liability is capped.")
 
 
-def _run(env, rule, llm, config=AuditConfig()):
+def _run(env, rule, llm, config=AuditConfig(), wording=Wording()):
     retriever, docstore, doc_id = env
     recorder = TraceRecorder()
-    nodes = RuleNodes(retriever, docstore, llm, recorder, doc_id, config)
+    nodes = RuleNodes(retriever, docstore, llm, recorder, doc_id, config, wording)
     final = build_rule_graph(nodes, config.max_rewrites).invoke(initial_state(rule))
     return final, [event.node for event in recorder.events()]
 
@@ -107,6 +107,18 @@ def test_insufficient_evidence_rewrites_twice_then_evaluates(env):
     assert nodes[:6] == ["search", "rewrite", "search", "rewrite", "search", "evaluate"]
     assert final["status"] is Status.MISSING
     assert "- zebra quantum\n- zebra galaxy" in [u for n, _, u in llm.calls if n == "RewrittenQueries"][1]
+
+
+def test_playbook_wording_reaches_every_prompt(env):
+    llm = FakeLLM({
+        "RewrittenQueries": RewrittenQueries(queries=["zebra galaxy"]),
+        "Evaluation": NOT_FOUND,
+        "Relevance": Relevance(relevant=False),
+    })
+    _run(env, _rule(queries=["zebra quantum"]), llm, wording=Wording("research paper", "statement"))
+    assert {name for name, _, _ in llm.calls} == {"RewrittenQueries", "Evaluation", "Relevance"}
+    assert all("research paper" in system and "contract" not in system for system in llm.systems)
+    assert all("The research paper must contain this statement." in user for _, _, user in llm.calls)
 
 
 def test_rewrite_that_finds_evidence_stops_rewriting(env):
