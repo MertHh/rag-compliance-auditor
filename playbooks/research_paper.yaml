@@ -1,0 +1,88 @@
+name: Research paper reporting
+document: research paper   # singular nouns the prompts use
+item: statement
+rules:
+  - id: research_aim
+    title: Research aim stated
+    type: must_exist
+    severity: medium
+    queries: ["the aim of this study is to", "we investigate whether research question objective"]
+    criteria: "The paper states the question, aim or objective the study addresses."
+  - id: sample_described
+    title: Sample and its size
+    type: must_exist
+    severity: high
+    queries: ["number of participants articles records included in the analysis", "sample size inclusion criteria"]
+    criteria: "The paper states what was studied (participants, records, articles or items), how they were selected, and how many were analysed."
+  - id: sample_size_justified
+    title: Sample size justified
+    type: must_exist
+    severity: low
+    queries: ["power analysis sample size calculation", "sample size was chosen determined"]
+    criteria: "The paper explains how the sample size was determined, for example by a power analysis or by including the whole available population."
+  - id: analysis_methods
+    title: Analysis methods described
+    type: must_exist
+    severity: high
+    queries: ["statistical analysis was performed using", "we used test regression model to compare"]
+    criteria: "The paper names the statistical tests, models or analysis procedures used to reach its results."
+  - id: measurement_reliability
+    title: Reliability of coding or measurement
+    type: condition
+    severity: medium
+    queries: ["interrater reliability agreement kappa", "coders annotators agreement validation"]
+    criteria: "If data were coded, annotated or rated by people, the paper reports how consistent the coders were, such as interrater agreement or a validation step."
+  - id: uncertainty_reported
+    title: Uncertainty reported for main results
+    type: must_exist
+    severity: medium
+    queries: ["95% confidence interval", "p < 0.05 standard error significant"]
+    criteria: "The main quantitative results come with a measure of uncertainty or significance, such as confidence intervals, standard errors or p-values."
+  - id: limitations
+    title: Limitations discussed
+    type: must_exist
+    severity: medium
+    queries: ["limitations of this study", "our study has several limitations"]
+    criteria: "The paper discusses limitations of its design, data or analysis."
+  - id: data_availability
+    title: Data availability
+    type: must_exist
+    severity: high
+    queries: ["data availability statement", "data are available in repository upon request"]
+    criteria: "The paper states where and how the data behind the results can be accessed, or why they cannot be shared."
+  - id: code_availability
+    title: Code availability
+    type: must_exist
+    severity: medium
+    queries: ["code is available at", "analysis scripts software available github repository"]
+    criteria: "The paper states where the analysis code or software can be obtained."
+  - id: preregistration
+    title: Preregistration or protocol
+    type: must_exist
+    severity: low
+    queries: ["preregistered registered protocol", "registration number trial registry OSF preregistration"]
+    criteria: "The study was preregistered or follows a published protocol, and the paper gives the registration or protocol reference."
+  - id: ethics_statement
+    title: Ethics statement
+    type: must_exist
+    severity: medium
+    queries: ["ethics committee institutional review board approval", "informed consent was obtained exempt from review"]
+    criteria: "The paper states an ethics approval, an exemption, or why ethics review was not needed."
+  - id: funding_statement
+    title: Funding stated
+    type: must_exist
+    severity: medium
+    queries: ["funding this work was supported by grant", "the authors received no specific funding"]
+    criteria: "The paper states who funded the work, or that it received no specific funding."
+  - id: competing_interests
+    title: Competing interests declared
+    type: must_exist
+    severity: medium
+    queries: ["competing interests", "conflict of interest declare"]
+    criteria: "The paper declares the authors' competing interests, or that there are none."
+  - id: funder_influence
+    title: Funder shaped the study
+    type: must_not_exist
+    severity: high
+    queries: ["the funders had a role in study design data collection decision to publish", "sponsor involvement analysis interpretation"]
+    criteria: "A funder or sponsor took part in the study design, data collection, analysis, the decision to publish or the writing of the paper."

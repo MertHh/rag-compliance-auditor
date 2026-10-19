@@ -42,17 +42,15 @@ class Shot:
 
 
 PAPER = "plos-one-data-availability.pdf"
-DPA = "eu-scc-art28.pdf"
 SHOTS = [
     Shot("finding", "audit", PAPER, "research_paper", {"rule": "code_availability"}, scroll_to="Finding"),
     Shot("audit", "audit", PAPER, "research_paper", {"rule": "preregistration"}, scroll_to="Risk score",
          pdf=False),
-    Shot("search", "search", PAPER, params={"q": "where can the analysis code be downloaded"},
+    Shot("search", "search", PAPER, params={"q": "which repositories did authors use most"},
          scroll_to="Query"),
     Shot("trace", "trace", PAPER, "research_paper",
-         {"rules": "preregistration,ethics_statement,code_availability,data_availability,limitations"},
-         scroll_to="Rules", pdf=False),
-    Shot("dpa", "audit", DPA, "gdpr_dpa", {"rule": "breach_notification"}, scroll_to="Finding"),
+         {"rules": "preregistration,uncertainty_reported,funder_influence,code_availability,limitations"},
+         scroll_to="Audit", pdf=False),
 ]
 
 

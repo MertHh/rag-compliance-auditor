@@ -1,29 +1,47 @@
-# Contract Compliance Auditor
+# Verifiable RAG: audit any document against a rule playbook
 
-Audits a contract PDF against a rule playbook and ties every finding to the exact text it rests on. Hybrid search (BM25 + dense + reranking) finds the relevant clauses; an LLM agent judges each rule; every quote is verified word for word against the source and highlighted in the PDF. Runs with OpenAI or fully locally with Ollama.
+Checks a PDF against a list of rules and ties every finding to the exact text it rests on. Hybrid search (BM25 + dense + reranking) finds the relevant passages; an LLM agent judges each rule; every quote is verified word for word against the source and highlighted in the PDF. Runs with OpenAI or fully locally with Ollama.
 
-- **Verifiable findings:** each finding cites quotes that exist verbatim in the contract, with page and highlight boxes. A quote that cannot be found is dropped, never shown.
-- **Measured, not claimed:** retrieval and audit quality are benchmarked on CUAD, commercial contracts annotated by lawyers (retrieval on 100 contracts, audits on a fixed 50-contract subset). Numbers below come from result files, not hand-typed.
-- **Domain-agnostic:** the rules are a YAML playbook. A second playbook (GDPR data processing agreements) runs on the same engine.
+The rules are a YAML playbook, so the domain is a file, not code. Three ship with it: commercial contracts, GDPR data processing agreements, and reporting checks for research papers. The same playbooks drive search, the agent and the report; the same index answers free questions on the Ask page.
+
+- **Verifiable findings:** each finding cites quotes that exist verbatim in the document, with page and highlight boxes. A quote that cannot be found is dropped, never shown.
+- **Measured, not claimed:** retrieval and audit quality are benchmarked on CUAD, contracts annotated by lawyers, because it is a public dataset with marked answer spans. Numbers below come from result files, not hand-typed.
 - **Private mode:** with Ollama, no document leaves the machine.
 
-![A compliant finding: the model's reasoning on the left, the verified quote highlighted in the contract PDF on the right](docs/images/evidence.jpg)
+## Example: a research paper
 
-| Audit summary | Hybrid search, stage by stage | Agent trace |
-|---|---|---|
-| [![Risk score and findings table for a GDPR audit](docs/images/audit.jpg)](docs/images/audit.jpg) | [![BM25, dense, RRF and rerank scores per result, with the hit highlighted in the PDF](docs/images/search.jpg)](docs/images/search.jpg) | [![Timeline of search and evaluate steps per rule, with tokens and cost](docs/images/trace.jpg)](docs/images/trace.jpg) |
+The screenshots audit a public research paper ([Federer et al. 2018, PLOS ONE, CC0](https://doi.org/10.1371/journal.pone.0194768)) with the `research_paper` playbook: 14 rules, qwen3:8b on an RTX 3060, 335 s, $0. They are taken by [`docs/screenshots.py`](docs/screenshots.py); [`docs/demo.md`](docs/demo.md) rebuilds the data.
 
-Screenshots: the GDPR playbook on the EU Art. 28 standard contractual clauses, run locally with qwen3:8b (12 rules, 169 s, $0).
+![Code availability finding: the model's reasoning and the verified quote on the left, the same sentence boxed in the PDF on the right](docs/images/finding.png)
+*A finding: the quote on the left is the exact sentence boxed in the PDF.*
 
-## Findings
+![Risk score, duration and cost above a table of 14 rules, two of them missing](docs/images/audit.png)
+*The report: 12 rules compliant, preregistration and uncertainty reporting missing. The risk score comes from code (severity × status), not from the model.*
+
+![Search table with BM25, dense, RRF and rerank columns for five results](docs/images/search.png)
+*Each search stage ranks on its own. "Deposition in repositories" is #13 for BM25 and #1 for dense; fusion keeps both signals and the reranker orders the result.*
+
+![Timeline of agent steps for five rules: search, rewrite, evaluate and long wide scans](docs/images/trace.png)
+*The agent per rule. Preregistration found nothing, so the agent rewrote its query, searched again, then scanned the top 15 sections one by one before reporting it missing.*
+
+Two of the 14 verdicts are wrong, and they show the limit of quote checking: the model marked the ethics statement compliant citing the paper's copyright line, and justified the sample size with a sentence about text clusters. Both quotes exist word for word, so verification passes; it proves the text is real, not that it supports the claim. That is what the accept/reject review on each finding is for.
+
+## Findings on contracts (CUAD)
+
+| model | missing F1 | citation accuracy | seconds per audit | USD per audit |
+|---|---|---|---|---|
+| qwen3:14b (local) | 0.877 | 0.781 | 1584 | 0 |
+| qwen3:8b (local, default) | 0.825 | 0.727 | 389 | 0 |
+| gpt-5.4-mini | 0.752 | 0.659 | 151 | 0.117 |
+
+_Same first 15 contracts of the 50-contract subset, 17 rules each; full tables under [Benchmarks](#benchmarks)._
 
 - **Hybrid search wins; lexical beats dense on contracts.** On 867 queries over 100 CUAD contracts, BM25 + dense fused with RRF reaches recall@5 0.820 and MRR 0.672, ahead of BM25 alone (0.802) and dense alone (0.739). Contract wording is formulaic, so exact terms matter.
 - **The reranker does not improve ranking here.** Hybrid + rerank scores recall@5 0.796 and MRR 0.658, slightly below plain hybrid. It stays in the pipeline because its score is the evidence-sufficiency signal: below `min_rerank_score` the agent rewrites the query and, if still nothing, reports the clause missing. The threshold (0.005) is set from data so that 95% of clauses that are present stay above it.
 - **Semantic chunking and an LLM context prefix bring nothing measurable.** Semantic chunks: recall@5 0.792 vs 0.796 for structural chunks, which also keep clause numbers for citations. A one-sentence context prefix per chunk (qwen3:8b): 0.808 with and without it on the 50-contract subset, so it stays off and uploads need no LLM call per chunk.
 - **The LLM is what makes the verdict reliable.** On the same 850 contract–rule pairs (50 contracts × 17 rules), deciding "missing" from the retrieval score alone, with the threshold tuned on the other 98 contracts, gives F1 0.834 at precision 0.746. The qwen3:8b agent reaches F1 0.875 at precision 0.950, and 78% of its quotes overlap a span the lawyers marked.
 - **A local 8B model is usable.** qwen3:8b (thinking off) audits a contract in about 6 minutes on an RTX 3060 with zero schema errors and $0 cost. llama3.1:8b and granite3.3:8b were clearly weaker on the first five contracts (F1 0.545 and 0.293, with schema errors). On the same first 15 contracts, qwen3:14b reached F1 0.877 against 0.825 for qwen3:8b, with citation accuracy 0.781 against 0.727, but it took about 26 minutes per contract instead of 6.5 minutes, because on a 12 GB card it only fits with the reranker moved to the CPU. The 8B model stays the default; 14B is worth it on a larger GPU.
-- **The GDPR playbook works on a real DPA.** On the European Commission's Art. 28 standard contractual clauses (Decision 2021/915 annex, 16 pages), qwen3:8b marks 11 of 12 rules compliant with verified quotes in under 3 minutes; the twelfth (processor using data for its own purposes) comes out uncertain because the model claimed a clause without quoting it. This demo also exposed words hyphenated at PDF line breaks ("con-
-troller"), which quote matching now ignores. The CUAD rows above were measured before that fix; CUAD text has almost no such breaks.
+- **The GDPR playbook works on a real DPA.** On the European Commission's Art. 28 standard contractual clauses (Decision 2021/915 annex, 16 pages), qwen3:8b marks 11 of 12 rules compliant with verified quotes in under 3 minutes; the twelfth (processor using data for its own purposes) comes out uncertain because the model claimed a clause without quoting it. This demo also exposed words hyphenated at PDF line breaks ("con-" / "troller"), which quote matching now ignores. The CUAD rows above were measured before that fix; CUAD text has almost no such breaks.
 - **The local model beats the OpenAI models on this task.** On the same first 15 contracts, gpt-5.4-mini reaches F1 0.752 (precision 0.951, recall 0.622, citation accuracy 0.659) at $0.117 and about 2.5 minutes per audit, below qwen3:8b (0.825). It rarely calls a clause missing, so it misses absent clauses. On the first 5 contracts, gpt-5.5 as the judge reaches F1 0.867 against 0.800 for mini, but its citation accuracy is lower (0.594 against 0.698) and it costs $0.68 per audit; qwen3:8b scores 0.895 and qwen3:14b 0.914 on those 5. Five contracts are only a rough check. gpt-5.4-mini stays the OpenAI default for its cost; the free local model is the recommended default.
 
 ## Architecture
@@ -42,7 +60,7 @@ flowchart LR
   API --> DB[(SQLite<br/>audits, traces, reviews)]
 ```
 
-Per rule, the agent searches the contract, rewrites the query when evidence is weak (at most twice), asks the evaluation model whether the clause exists and meets the criteria, verifies every quote, and runs a wide scan of the top 15 sections before it reports a clause as missing. The status comes from the model; the risk score comes from code: severity weight × status factor.
+Per rule, the agent searches the document, rewrites the query when evidence is weak (at most twice), asks the evaluation model whether the item exists and meets the criteria, verifies every quote, and runs a wide scan of the top 15 sections before it reports the item as missing. The status comes from the model; the risk score comes from code: severity weight × status factor.
 
 ## Quick start (Docker)
 
@@ -85,6 +103,8 @@ A playbook is a YAML file in `playbooks/`; it is validated on load and errors na
 
 ```yaml
 name: Commercial contract
+document: contract                # what the rules check, singular (default: document)
+item: clause                      # what one rule looks for (default: passage)
 rules:
   - id: liability_cap             # lowercase letters, digits, underscores
     title: Limitation of liability
@@ -94,13 +114,15 @@ rules:
     criteria: "Total liability of a party is limited to a stated amount or a formula."
 ```
 
-| type | clause found, meets criteria | found, does not | not found |
+| type | item found, meets criteria | found, does not | not found |
 |---|---|---|---|
 | must_exist | compliant | non-compliant | missing |
 | condition | compliant | non-compliant | missing |
-| must_not_exist | non-compliant (prohibited clause present) | compliant | compliant |
+| must_not_exist | non-compliant (prohibited item present) | compliant | compliant |
 
-For `must_not_exist`, `criteria` describes the prohibited clause. Good `queries` use the words contracts use, not the rule's name. Shipped playbooks: `commercial_contract` (18 rules, derived from CUAD clause types) and `gdpr_dpa` (12 rules, GDPR Art. 28).
+For `must_not_exist`, `criteria` describes the prohibited item. Good `queries` use the words such documents use, not the rule's name. `document` and `item` name the domain in the prompts ("You review research papers…"); the two contract playbooks set them to contract and clause, which gives the prompts the benchmarks were measured with, word for word.
+
+Shipped playbooks: `commercial_contract` (18 rules, derived from CUAD clause types), `gdpr_dpa` (12 rules, GDPR Art. 28) and `research_paper` (14 reporting rules for an empirical paper: data and code availability, limitations, ethics, preregistration, funding).
 
 ## Benchmarks
 
@@ -212,7 +234,7 @@ python -m benchmarks.make_readme_table
 | `POST /audits`, `GET /audits`, `GET /audits/{id}` | start (cached result or 202), list, report |
 | `GET /audits/{id}/trace` | per-rule agent steps with time, tokens and cost |
 | `POST /audits/{id}/findings/{rule_id}/review` | accept or reject a finding |
-| `GET /audits/{id}/export?format=json\|pdf` | report; the PDF appends the contract with highlights |
+| `GET /audits/{id}/export?format=json\|pdf` | report; the PDF appends the document with highlights |
 | `GET /benchmarks` | benchmark result files |
 
 ## Tests

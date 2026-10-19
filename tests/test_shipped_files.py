@@ -25,6 +25,15 @@ def test_gdpr_playbook():
     assert all("Art." in r.criteria or "Chapter V" in r.criteria for r in rules)
 
 
+def test_research_paper_playbook():
+    loaded = load_playbook(ROOT / "playbooks" / "research_paper.yaml")
+    playbook = loaded.playbook
+    assert (playbook.document, playbook.item) == ("research paper", "statement")
+    assert len(playbook.rules) == 14
+    assert {r.type for r in playbook.rules} == {"must_exist", "must_not_exist", "condition"}
+    assert all(len(r.queries) >= 2 for r in playbook.rules)
+
+
 def test_compose_file():
     compose = yaml.safe_load((ROOT / "docker-compose.yml").read_text(encoding="utf-8"))
     services = compose["services"]
