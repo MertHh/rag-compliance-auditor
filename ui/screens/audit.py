@@ -73,6 +73,10 @@ if history:
         f"{runs[i]['created_at'][:16].replace('T', ' ')} · {runs[i]['playbook']} · "
         f"{runs[i]['model']} · risk {runs[i]['risk_score']}")
 
+linked = shared.from_link("audit")
+if linked:
+    st.session_state["audit_id"] = linked
+    st.session_state["audit_saved"] = True
 audit_id = st.session_state.get("audit_id")
 if not audit_id:
     st.stop()
@@ -115,7 +119,11 @@ for error in report["errors"]:
 st.dataframe(finding_rows(report), hide_index=True)
 
 findings = {f["rule_id"]: f for f in report["findings"]}
-rule_id = st.selectbox("Finding", list(findings),
+finding_key = f"finding_{audit_id}"
+linked_rule = shared.from_link("rule")
+if linked_rule in findings:
+    st.session_state[finding_key] = linked_rule
+rule_id = st.selectbox("Finding", list(findings), key=finding_key,
                        format_func=lambda r: f"{status_label(findings[r]['status'])} · {findings[r]['title']}")
 finding = findings[rule_id]
 details, source = st.columns([2, 3])

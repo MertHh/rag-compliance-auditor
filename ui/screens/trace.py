@@ -19,6 +19,9 @@ if not audits:
 
 runs = {run["audit_id"]: run for run in audits}
 ids = list(runs)
+linked = shared.from_link("audit")
+if linked in runs:
+    st.session_state["audit_id"] = linked
 current = st.session_state.get("audit_id")
 audit_id = st.selectbox(
     "Audit", ids, index=ids.index(current) if current in ids else 0,
@@ -34,7 +37,11 @@ if not rows:
     st.stop()
 
 rules = sorted({row["rule_id"] for row in rows})
-picked = st.multiselect("Rules", rules, default=rules)
+rules_key = f"rules_{audit_id}"
+linked_rules = [r for r in (shared.from_link("rules") or "").split(",") if r in rules]
+if linked_rules or rules_key not in st.session_state:
+    st.session_state[rules_key] = linked_rules or rules
+picked = st.multiselect("Rules", rules, key=rules_key)
 shown = [row for row in rows if row["rule_id"] in picked]
 if not shown:
     st.stop()

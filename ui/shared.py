@@ -18,6 +18,17 @@ def load_documents(client: ApiClient) -> list[dict]:
         st.stop()
 
 
+def from_link(name: str) -> str | None:
+    """A value from the page URL, such as ?audit=..., returned once per new value: a shared link
+    opens that view, and choices made on the page afterwards are not overridden."""
+    value = st.query_params.get(name)
+    seen = f"_link_{name}"
+    if not value or st.session_state.get(seen) == value:
+        return None
+    st.session_state[seen] = value
+    return value
+
+
 def document_picker(docs: list[dict], label: str = "Document") -> dict | None:
     """A document selector whose choice carries over between pages."""
     if not docs:
@@ -25,6 +36,9 @@ def document_picker(docs: list[dict], label: str = "Document") -> dict | None:
         return None
     by_id = {doc["document_id"]: doc for doc in docs}
     ids = list(by_id)
+    linked = from_link("document")
+    if linked in by_id:
+        st.session_state["document_id"] = linked
     current = st.session_state.get("document_id")
     chosen = st.selectbox(label, ids, index=ids.index(current) if current in ids else 0,
                           format_func=lambda document_id: document_label(by_id[document_id]))

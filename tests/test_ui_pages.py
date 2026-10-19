@@ -22,10 +22,12 @@ def fake(monkeypatch):
     return api
 
 
-def run_screen(name: str, **state) -> AppTest:
+def run_screen(name: str, params: dict | None = None, **state) -> AppTest:
     at = AppTest.from_file(str(UI / "screens" / f"{name}.py"), default_timeout=10)
     for key, value in state.items():
         at.session_state[key] = value
+    for key, value in (params or {}).items():
+        at.query_params[key] = value
     return at.run()
 
 
@@ -259,3 +261,28 @@ def test_viewer_key_changes_with_the_boxes():
     moved = [{**boxes[0], "page": 3}]
     assert pdfview.viewer_key("ask_pdf", boxes) != pdfview.viewer_key("ask_pdf", moved)
     assert pdfview.viewer_key("ask_pdf", boxes) != pdfview.viewer_key("audit_pdf", boxes)
+
+
+def test_link_opens_a_saved_audit_on_one_finding(fake):
+    at = run_screen("audit", {"document": DOC_ID, "audit": AUDIT_ID, "rule": "confidentiality"})
+    assert not at.exception
+    assert at.metric[0].value == "40.0"
+    finding = at.selectbox(key=f"finding_{AUDIT_ID}")
+    assert finding.value == "confidentiality"
+    finding.set_value("liability_cap").run()
+    assert at.selectbox(key=f"finding_{AUDIT_ID}").value == "liability_cap"
+
+
+def test_link_picks_the_trace_audit_and_rules(fake, monkeypatch):
+    other = {**fake_api.TRACE[0], "rule_id": "confidentiality"}
+    monkeypatch.setattr(fake_api, "TRACE", [*fake_api.TRACE, other])
+    at = run_screen("trace", {"audit": AUDIT_ID, "rules": "liability_cap,unknown"})
+    assert not at.exception
+    assert at.multiselect[0].value == ["liability_cap"]
+
+
+def test_link_fills_the_search_query(fake):
+    at = run_screen("search", {"q": "liability cap"})
+    assert not at.exception
+    assert at.text_input(key="search_query").value == "liability cap"
+    assert [call[1] for call in fake.calls if call[0] == "search"] == ["liability cap"]

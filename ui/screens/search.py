@@ -9,6 +9,9 @@ st.title("Search")
 docs = shared.load_documents(client)
 by_id = {doc["document_id"]: doc for doc in docs}
 
+linked = shared.from_link("q")
+if linked:
+    st.session_state["search_query"] = linked
 query = st.text_input("Query", key="search_query", placeholder="limitation of liability")
 mode_col, rerank_col, k_col = st.columns(3)
 mode = mode_col.selectbox("Mode", ["hybrid", "bm25", "dense"])
