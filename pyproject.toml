@@ -29,6 +29,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8"]
+docs = ["playwright>=1.49"]   # docs/screenshots.py
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/auditor"]

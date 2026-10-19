@@ -142,3 +142,4 @@ def test_md_escape_keeps_dollar_amounts_literal():
 def test_md_quote_keeps_a_quote_broken_by_pdf_lines_in_one_blockquote():
     assert md_quote("unless required to\ndo so by $5 law") == r"> unless required to do so by \$5 law"
     assert md_quote("  1. first\n\n second ") == r"> 1\. first second"
+    assert md_quote("Regu-\nlation (EU) and third-\nParty") == "> Regulation (EU) and third- Party"

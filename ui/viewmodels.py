@@ -26,6 +26,8 @@ NODE_ORDER = ["search", "rewrite", "evaluate", "verify", "wide_scan"]
 NODE_COLORS = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4"]
 
 _SPACES = re.compile(r"\s+")
+# A word the PDF split at a line end: "Regu-" then "lation" on the next line.
+_LINE_BREAK_HYPHEN = re.compile(r"(?<=\w)-[ \t]*\r?\n\s*(?=[a-z])")
 _MD_SPECIAL = re.compile(r"([\\$*_`\[\]<>#~|])")
 # List markers at a line start: "- x", "+ x", "1. x".
 _MD_LINE_START = re.compile(r"^(\s*)(?:([-+])|(\d+)\.)(?=\s|$)", re.MULTILINE)
@@ -45,8 +47,9 @@ def md_escape(text: str) -> str:
 
 def md_quote(text: str) -> str:
     """One escaped blockquote line. A quote keeps the PDF's line breaks, and after the first
-    break the rest would fall out of the blockquote as plain text."""
-    return "> " + md_escape(_SPACES.sub(" ", text).strip())
+    break the rest would fall out of the blockquote as plain text; words split at a break
+    are joined again."""
+    return "> " + md_escape(_SPACES.sub(" ", _LINE_BREAK_HYPHEN.sub("", text)).strip())
 
 
 def status_label(status: str) -> str:

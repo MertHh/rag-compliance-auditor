@@ -16,8 +16,8 @@ METADATA_SYSTEM = (
     "in English, such as 'Master Services Agreement', 'Research Article' or 'Security Policy'. "
     "date is the effective, signing or publication date as YYYY-MM-DD. parties are the legal "
     "names of the contracting parties, or for a document that is not a contract its authors or "
-    "issuing organisations. jurisdiction is the governing law, such as 'New York' or 'England "
-    "and Wales'. "
+    "issuing organisations. jurisdiction is the governing law the text names, such as 'New York' "
+    "or 'England and Wales', not where the authors or publisher are based. "
     "Use null, or an empty list for parties, when the text does not state a value."
 )
 
