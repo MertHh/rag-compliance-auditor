@@ -17,6 +17,7 @@ START = "<!-- BENCHMARKS:START -->"
 END = "<!-- BENCHMARKS:END -->"
 ORDER = ("retrieval", "chunking", "context_prefix", "presence", "audit")
 ERROR_LIMIT = 200
+SPLIT_COLUMN = "contracts"
 
 
 def _rank(result: dict) -> int:
@@ -48,6 +49,28 @@ def _error_line(result: dict) -> str:
     return f"> {_inline(result['file'])}: {_inline(message)}"
 
 
+def _table(items: list[dict], drop: str | None = None) -> list[str]:
+    """The rows of these result files as one table, then their error lines and distinct notes."""
+    lines = []
+    rows = [row for item in items if not item["error"] for row in item["rows"]]
+    if rows:
+        columns = [c for c in dict.fromkeys(key for row in rows for key in row) if c != drop]
+        lines.append("| " + " | ".join(_inline(c) for c in columns) + " |")
+        lines.append("|" + "|".join(" --- " for _ in columns) + "|")
+        lines.extend("| " + " | ".join(_cell(row.get(c)) for c in columns) + " |" for row in rows)
+    lines.extend(_error_line(item) for item in items if item["error"])
+    notes = dict.fromkeys(_inline(item["notes"]) for item in items if item["notes"])
+    if notes:
+        lines.append("")
+        lines.extend(f"- {note}" for note in notes)
+    return lines
+
+
+def _contract_counts(items: list[dict]) -> list:
+    counts = {row.get(SPLIT_COLUMN) for item in items if not item["error"] for row in item["rows"]}
+    return sorted(counts, reverse=True) if len(counts) > 1 and None not in counts else []
+
+
 def render(results: list[dict]) -> str:
     groups: dict[str, list[dict]] = {}
     for result in sorted(results, key=lambda r: (_rank(r), r["file"])):
@@ -55,19 +78,19 @@ def render(results: list[dict]) -> str:
     sections = []
     for title, items in groups.items():
         lines = [f"### {_inline(title)}", ""]
-        rows = [row for item in items if not item["error"] for row in item["rows"]]
-        if rows:
-            columns = list(dict.fromkeys(key for row in rows for key in row))
-            lines.append("| " + " | ".join(_inline(c) for c in columns) + " |")
-            lines.append("|" + "|".join(" --- " for _ in columns) + "|")
-            lines.extend("| " + " | ".join(_cell(row.get(c)) for c in columns) + " |" for row in rows)
-        lines.extend(_error_line(item) for item in items if item["error"])
-        notes = [item["notes"] for item in items if item["notes"]]
+        counts = _contract_counts(items)
+        if counts:
+            # Rows measured on different contracts are not comparable, so each count gets a table.
+            for count in counts:
+                part = [item for item in items if not item["error"]
+                        and any(row.get(SPLIT_COLUMN) == count for row in item["rows"])]
+                lines.extend([f"#### {_cell(count)} contracts", "", *_table(part, SPLIT_COLUMN), ""])
+            lines.extend(_error_line(item) for item in items if item["error"])
+        else:
+            lines.extend([*_table(items), ""])
         dates = sorted({item["created_at"] for item in items if item["created_at"]})
         files = ", ".join(_inline(item["file"]) for item in items)
-        lines.append("")
         lines.append(f"_Source: {files}" + (f"; measured {', '.join(_inline(d) for d in dates)}" if dates else "") + "._")
-        lines.extend(f"- {_inline(note)}" for note in notes)
         sections.append("\n".join(lines))
     return "\n\n".join(sections) if sections else "_No benchmark results yet._"
 

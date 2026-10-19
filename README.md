@@ -117,8 +117,9 @@ Data: [CUAD v1](https://www.atticusprojectai.org/cuad) by The Atticus Project, C
 | hybrid | 0.82 | 0.972 | 0.672 | 867 |
 | hybrid + rerank | 0.796 | 0.972 | 0.658 | 867 |
 
-_Source: retrieval.json; measured 2026-10-15._
 - Each query searches one contract; a hit is the first chunk overlapping a span the lawyers marked. Structural chunking, no context prefix.
+
+_Source: retrieval.json; measured 2026-10-15._
 
 ### Chunking (hybrid + rerank)
 
@@ -127,8 +128,9 @@ _Source: retrieval.json; measured 2026-10-15._
 | structural | 0.796 | 0.972 | 0.658 | 867 |
 | semantic | 0.792 | 0.983 | 0.667 | 867 |
 
-_Source: chunking.json; measured 2026-10-15._
 - Semantic chunks break where adjacent sentence embeddings drift furthest (90th percentile), at most 400 tokens; structural chunks follow clause numbering.
+
+_Source: chunking.json; measured 2026-10-15._
 
 ### Context prefix (50-contract subset, hybrid + rerank)
 
@@ -137,8 +139,9 @@ _Source: chunking.json; measured 2026-10-15._
 | off | - | 0.808 | 0.995 | 0.685 | 365 |
 | on | ollama qwen3:8b | 0.808 | 0.992 | 0.684 | 365 |
 
-_Source: context_prefix.json; measured 2026-10-16._
 - One LLM sentence per chunk, prepended before embedding. Cost $0.00; 0 chunks without a prefix.
+
+_Source: context_prefix.json; measured 2026-10-16._
 
 ### Clause presence from retrieval alone (hybrid + rerank)
 
@@ -148,29 +151,41 @@ _Source: context_prefix.json; measured 2026-10-16._
 | best F1 | 0.3193 | 0.811 | 0.966 | 0.882 |
 | keeps 95% of present clauses | 0.005 | 0.948 | 0.284 | 0.437 |
 
-_Source: presence.json; measured 2026-10-15._
 - Positive class: clause missing. 3600 contract-category pairs. Recommended min_rerank_score: 0.0050 (keeps 95% of present clauses above it).
+
+_Source: presence.json; measured 2026-10-15._
 
 ### Audit on the CUAD subset
 
-| provider | models | contracts | rules | missing precision | missing recall | missing F1 | citation accuracy | undecided % | errors | seconds per audit | USD per audit |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| ollama | qwen3:14b | 15 | 17 | 0.934 | 0.826 | 0.877 | 0.781 | 4.3 | 0 | 1584.2 | 0 |
-| ollama | qwen3:8b | 15 | 17 | 0.925 | 0.745 | 0.825 | 0.727 | 7.8 | 0 | 389 | 0 |
-| ollama | qwen3:8b | 5 | 17 | 0.911 | 0.879 | 0.895 | 0.682 | 4.7 | 0 | 461.8 | 0 |
-| ollama | qwen3:8b | 50 | 17 | 0.95 | 0.811 | 0.875 | 0.782 | 5.9 | 0 | 370.5 | 0 |
-| openai | gpt-5.4-mini | 15 | 17 | 0.951 | 0.622 | 0.752 | 0.659 | 2.7 | 0 | 151 | 0.1174 |
-| openai | gpt-5.4-mini | 5 | 17 | 0.933 | 0.7 | 0.8 | 0.698 | 0 | 0 | 156.4 | 0.1322 |
-| openai | gpt-5.5+gpt-5.4-mini | 5 | 17 | 0.925 | 0.817 | 0.867 | 0.594 | 0 | 0 | 223 | 0.6823 |
+#### 50 contracts
+
+| provider | models | rules | missing precision | missing recall | missing F1 | citation accuracy | undecided % | errors | seconds per audit | USD per audit |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| ollama | qwen3:8b | 17 | 0.95 | 0.811 | 0.875 | 0.782 | 5.9 | 0 | 370.5 | 0 |
+
+- 50 of 50 subset contracts; positive class: clause missing; citation accuracy counts quotes overlapping a marked span; undecided % includes errors.
+
+#### 15 contracts
+
+| provider | models | rules | missing precision | missing recall | missing F1 | citation accuracy | undecided % | errors | seconds per audit | USD per audit |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| ollama | qwen3:14b | 17 | 0.934 | 0.826 | 0.877 | 0.781 | 4.3 | 0 | 1584.2 | 0 |
+| ollama | qwen3:8b | 17 | 0.925 | 0.745 | 0.825 | 0.727 | 7.8 | 0 | 389 | 0 |
+| openai | gpt-5.4-mini | 17 | 0.951 | 0.622 | 0.752 | 0.659 | 2.7 | 0 | 151 | 0.1174 |
+
+- 15 of the first 15 of 50 subset contracts; positive class: clause missing; citation accuracy counts quotes overlapping a marked span; undecided % includes errors.
+
+#### 5 contracts
+
+| provider | models | rules | missing precision | missing recall | missing F1 | citation accuracy | undecided % | errors | seconds per audit | USD per audit |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| ollama | qwen3:8b | 17 | 0.911 | 0.879 | 0.895 | 0.682 | 4.7 | 0 | 461.8 | 0 |
+| openai | gpt-5.4-mini | 17 | 0.933 | 0.7 | 0.8 | 0.698 | 0 | 0 | 156.4 | 0.1322 |
+| openai | gpt-5.5+gpt-5.4-mini | 17 | 0.925 | 0.817 | 0.867 | 0.594 | 0 | 0 | 223 | 0.6823 |
+
+- 5 of the first 5 of 50 subset contracts; positive class: clause missing; citation accuracy counts quotes overlapping a marked span; undecided % includes errors.
 
 _Source: audit-ollama-qwen3-14b-first15.json, audit-ollama-qwen3-8b-first15.json, audit-ollama-qwen3-8b-first5.json, audit-ollama-qwen3-8b.json, audit-openai-gpt-5-4-mini-first15.json, audit-openai-gpt-5-4-mini-first5.json, audit-openai-gpt-5-5-gpt-5-4-mini-first5.json; measured 2026-10-16._
-- 15 of the first 15 of 50 subset contracts; positive class: clause missing; citation accuracy counts quotes overlapping a marked span; undecided % includes errors.
-- 15 of the first 15 of 50 subset contracts; positive class: clause missing; citation accuracy counts quotes overlapping a marked span; undecided % includes errors.
-- 5 of the first 5 of 50 subset contracts; positive class: clause missing; citation accuracy counts quotes overlapping a marked span; undecided % includes errors.
-- 50 of 50 subset contracts; positive class: clause missing; citation accuracy counts quotes overlapping a marked span; undecided % includes errors.
-- 15 of the first 15 of 50 subset contracts; positive class: clause missing; citation accuracy counts quotes overlapping a marked span; undecided % includes errors.
-- 5 of the first 5 of 50 subset contracts; positive class: clause missing; citation accuracy counts quotes overlapping a marked span; undecided % includes errors.
-- 5 of the first 5 of 50 subset contracts; positive class: clause missing; citation accuracy counts quotes overlapping a marked span; undecided % includes errors.
 
 <!-- BENCHMARKS:END -->
 

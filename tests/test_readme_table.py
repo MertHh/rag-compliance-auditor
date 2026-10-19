@@ -103,3 +103,19 @@ def test_main_leaves_readme_without_markers_untouched(tmp_path):
     readme.write_text("# No markers\n", encoding="utf-8")
     assert table.main(["--readme", str(readme), "--results", str(tmp_path / "none")]) == 1
     assert readme.read_text(encoding="utf-8") == "# No markers\n"
+
+
+def test_rows_on_different_contract_counts_get_their_own_tables():
+    def audit(name, contracts, f1):
+        note = f"{contracts} of {contracts} contracts; positive class: clause missing"
+        return {"file": name, "title": "Audit", "created_at": None, "error": None, "notes": note,
+                "rows": [{"model": name, "contracts": contracts, "missing F1": f1}]}
+
+    text = table.render([audit("a.json", 5, 0.8), audit("b.json", 50, 0.9), audit("c.json", 5, 0.7)])
+    assert text.count("### Audit") == 1
+    assert text.index("#### 50 contracts") < text.index("#### 5 contracts")
+    five = text[text.index("#### 5 contracts"):]
+    assert "| model | missing F1 |" in five
+    assert five.index("| a.json | 0.8 |") < five.index("| c.json | 0.7 |")
+    assert five.count("- 5 of 5 contracts; positive class: clause missing") == 1
+    assert "_Source: a.json, b.json, c.json._" in text
