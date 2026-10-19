@@ -43,6 +43,12 @@ def md_escape(text: str) -> str:
     return _MD_LINE_START.sub(_escape_list_marker, escaped)
 
 
+def md_quote(text: str) -> str:
+    """One escaped blockquote line. A quote keeps the PDF's line breaks, and after the first
+    break the rest would fall out of the blockquote as plain text."""
+    return "> " + md_escape(_SPACES.sub(" ", text).strip())
+
+
 def status_label(status: str) -> str:
     icon = STATUS_ICON.get(status)
     return f"{icon} {STATUS_TEXT[status]}" if icon else status

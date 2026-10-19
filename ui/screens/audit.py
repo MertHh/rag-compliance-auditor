@@ -4,7 +4,7 @@ import streamlit as st
 
 import shared
 from apiclient import ApiError
-from viewmodels import citation_annotations, finding_rows, md_escape, run_label, status_label
+from viewmodels import citation_annotations, finding_rows, md_escape, md_quote, run_label, status_label
 
 client = shared.get_client()
 st.title("Audit")
@@ -128,7 +128,7 @@ with details:
     st.caption(f"Evidence: {evidence['queries_tried']} queries tried, "
                f"{evidence['sections_examined']} sections examined")
     for citation in finding["citations"]:
-        st.markdown(f"> {md_escape(citation['quote'])}")
+        st.markdown(md_quote(citation["quote"]))
         st.caption(f"page {citation['page'] or '-'} · "
                    f"section {md_escape(citation['section_path'] or '-')}")
     current = finding["review"]

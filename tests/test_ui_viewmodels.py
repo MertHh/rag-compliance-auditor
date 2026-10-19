@@ -13,6 +13,7 @@ from viewmodels import (
     finding_rows,
     label_column,
     md_escape,
+    md_quote,
     numeric_columns,
     rule_totals,
     run_label,
@@ -136,3 +137,8 @@ def test_md_escape_keeps_dollar_amounts_literal():
     assert md_escape(r"a_b [c](d) `e` <f> #g \ ") == r"a\_b \[c\](d) \`e\` \<f\> \#g \\ "
     assert md_escape("- item\n  + sub\n1. one") == "\\- item\n  \\+ sub\n1\\. one"
     assert md_escape("") == ""
+
+
+def test_md_quote_keeps_a_quote_broken_by_pdf_lines_in_one_blockquote():
+    assert md_quote("unless required to\ndo so by $5 law") == r"> unless required to do so by \$5 law"
+    assert md_quote("  1. first\n\n second ") == r"> 1\. first second"

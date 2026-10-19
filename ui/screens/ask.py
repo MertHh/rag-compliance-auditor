@@ -2,7 +2,7 @@ import streamlit as st
 
 import shared
 from apiclient import ApiError
-from viewmodels import SEARCH_COLOR, bbox_annotations, document_label, md_escape
+from viewmodels import SEARCH_COLOR, bbox_annotations, document_label, md_escape, md_quote
 
 client = shared.get_client()
 st.title("Ask the documents")
@@ -42,7 +42,7 @@ usage = result["usage"]
 st.caption(f"{result['model']} · {usage['input_tokens']}/{usage['output_tokens']} tokens · "
            f"${usage['cost_usd']:.4f}")
 for number, citation in enumerate(result["citations"], start=1):
-    st.markdown(f"> {md_escape(citation['quote'])}")
+    st.markdown(md_quote(citation["quote"]))
     source = by_id.get(citation["document_id"])
     name = document_label(source) if source else citation["document_id"][:12]
     st.caption(f"[{number}] {name} · page {citation['page'] or '-'} · "
