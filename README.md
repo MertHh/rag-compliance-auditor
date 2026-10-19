@@ -59,9 +59,22 @@ Measured on CUAD, where lawyers marked which clauses each contract has:
 
 - **Finding the passage:** the right one is in the top 5 for 80% of 867 questions over 100 contracts.
 - **Finding missing clauses** (50 contracts, local qwen3:8b): when it says a clause is missing it is right 95% of the time, and it finds 81% of the clauses that really are missing (F1 0.875). 78% of its quotes land on text the lawyers marked. About 6 minutes per contract, $0.
-- **Local beats cloud here:** on the same 15 contracts qwen3:8b scores F1 0.825, gpt-5.4-mini 0.752.
-
 [Benchmarks](docs/benchmarks.md) has every table and finding; [what the scores mean](docs/how-it-works.md#part-4-what-the-benchmark-scores-mean) works them out on one contract.
+
+## Which model?
+
+Six LLMs ran the same audit on the same first 5 benchmark contracts (17 rules each); only the model changed. *Finds missing clauses* is F1: 1.0 means every missing clause found with no false alarm.
+
+| model | runs | finds missing clauses (F1) | quotes on the lawyers' text | unsure or failed | per contract | in short |
+|---|---|---|---|---|---|---|
+| qwen3:14b | local | **0.914** | 70% | 2% | 30 min, $0 | the most accurate, but 4× slower than 8B on a 12 GB GPU |
+| qwen3:8b | local | 0.895 | 68% | 5% | 8 min, $0 | **the default**: nearly as accurate, fast enough, free |
+| gpt-5.5 judging, gpt-5.4-mini helping | OpenAI | 0.867 | 59% | 0% | 4 min, $0.68 | good at finding gaps, but of the top four its quotes land on the lawyers' text least often, and it costs the most |
+| gpt-5.4-mini | OpenAI | 0.800 | 70% | 0% | 2.5 min, $0.13 | the fastest; rarely says "missing", so it overlooks 3 in 10 absent clauses |
+| llama3.1:8b | local | 0.545 | 48% | 27% | 9 min, $0 | a quarter of its answers unusable, 4 replies failed outright |
+| granite3.3:8b | local | 0.293 | 53% | 27% | 15 min, $0 | almost never says "missing" (finds 17%); one of its 5 audits did not finish |
+
+Five contracts is a small sample, so the top three were also run on 15 contracts: qwen3:14b 0.877, qwen3:8b 0.825, gpt-5.4-mini 0.752, the same order. In all, the benchmarks scored 5,932 searches (867 questions under up to seven search settings) and 1,598 audit decisions (94 contract audits × 17 rules); every row comes from a file in [`benchmarks/results`](benchmarks/results).
 
 ## Run it
 

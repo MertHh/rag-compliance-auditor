@@ -101,13 +101,23 @@ _Source: presence.json; measured 2026-10-15._
 
 | provider | models | rules | missing precision | missing recall | missing F1 | citation accuracy | undecided % | errors | seconds per audit | USD per audit |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| ollama | llama3.1:8b | 17 | 0.72 | 0.439 | 0.545 | 0.476 | 27.1 | 4 | 523.3 | 0 |
+| ollama | qwen3:14b | 17 | 0.93 | 0.898 | 0.914 | 0.704 | 2.4 | 0 | 1773.3 | 0 |
 | ollama | qwen3:8b | 17 | 0.911 | 0.879 | 0.895 | 0.682 | 4.7 | 0 | 461.8 | 0 |
 | openai | gpt-5.4-mini | 17 | 0.933 | 0.7 | 0.8 | 0.698 | 0 | 0 | 156.4 | 0.1322 |
 | openai | gpt-5.5+gpt-5.4-mini | 17 | 0.925 | 0.817 | 0.867 | 0.594 | 0 | 0 | 223 | 0.6823 |
 
 - 5 of the first 5 of 50 subset contracts; positive class: clause missing; citation accuracy counts quotes overlapping a marked span; undecided % includes errors.
 
-_Source: audit-ollama-qwen3-14b-first15.json, audit-ollama-qwen3-8b-first15.json, audit-ollama-qwen3-8b-first5.json, audit-ollama-qwen3-8b.json, audit-openai-gpt-5-4-mini-first15.json, audit-openai-gpt-5-4-mini-first5.json, audit-openai-gpt-5-5-gpt-5-4-mini-first5.json; measured 2026-10-16._
+#### 4 contracts
+
+| provider | models | rules | missing precision | missing recall | missing F1 | citation accuracy | undecided % | errors | seconds per audit | USD per audit |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| ollama | granite3.3:8b | 17 | 1 | 0.171 | 0.293 | 0.526 | 26.5 | 8 | 882.2 | 0 |
+
+- 4 of the first 5 of 50 subset contracts (the fifth audit did not finish); positive class: clause missing; citation accuracy counts quotes overlapping a marked span; undecided % includes errors.
+
+_Source: audit-ollama-granite3-3-8b-first5.json, audit-ollama-llama3-1-8b-first5.json, audit-ollama-qwen3-14b-first15.json, audit-ollama-qwen3-14b-first5.json, audit-ollama-qwen3-8b-first15.json, audit-ollama-qwen3-8b-first5.json, audit-ollama-qwen3-8b.json, audit-openai-gpt-5-4-mini-first15.json, audit-openai-gpt-5-4-mini-first5.json, audit-openai-gpt-5-5-gpt-5-4-mini-first5.json; measured 2026-10-15, 2026-10-16._
 
 <!-- BENCHMARKS:END -->
 
