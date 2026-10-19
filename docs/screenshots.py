@@ -39,18 +39,22 @@ class Shot:
     params: dict = field(default_factory=dict)
     scroll_to: str | None = None   # text that should sit at the top of the shot
     pdf: bool = True               # wait for the PDF viewer to draw
+    height: int | None = None      # crop to this many CSS pixels from the top
 
 
+CONTRACT = "cuad-cooperation-agreement.pdf"
 PAPER = "plos-one-data-availability.pdf"
 SHOTS = [
-    Shot("finding", "audit", PAPER, "research_paper", {"rule": "code_availability"}, scroll_to="Finding"),
-    Shot("audit", "audit", PAPER, "research_paper", {"rule": "preregistration"}, scroll_to="Risk score",
-         pdf=False),
-    Shot("search", "search", PAPER, params={"q": "which repositories did authors use most"},
-         scroll_to="Query"),
-    Shot("trace", "trace", PAPER, "research_paper",
-         {"rules": "preregistration,uncertainty_reported,funder_influence,code_availability,limitations"},
+    Shot("finding", "audit", CONTRACT, "commercial_contract", {"rule": "exclusivity"}, scroll_to="Finding"),
+    Shot("audit", "audit", CONTRACT, "commercial_contract", {"rule": "audit_rights"},
+         scroll_to="Risk score", pdf=False),
+    Shot("search", "search", CONTRACT,
+         params={"q": "Can a party transfer this agreement to another company without the other party's consent?"},
+         scroll_to="Query", pdf=False, height=600),
+    Shot("trace", "trace", CONTRACT, "commercial_contract",
+         {"rules": "minimum_commitment,renewal_term,audit_rights,anti_assignment"},
          scroll_to="Audit", pdf=False),
+    Shot("paper", "audit", PAPER, "research_paper", {"rule": "code_availability"}, scroll_to="Finding"),
 ]
 
 
@@ -82,7 +86,8 @@ def take(page: Page, ui: str, shot: Shot, params: dict) -> Path:
     page.evaluate("document.activeElement && document.activeElement.blur()")
     page.wait_for_timeout(500)
     path = OUT / f"{shot.name}.png"
-    page.screenshot(path=path)
+    clip = {"x": 0, "y": 0, "width": VIEWPORT["width"], "height": shot.height} if shot.height else None
+    page.screenshot(path=path, clip=clip)
     return path
 
 
